@@ -4,6 +4,7 @@ from django.db import models
 
 class CustomUser(AbstractUser):
     number_phone = models.CharField(max_length=20, unique=True)
+    fullname = models.CharField(max_length=255)
 
     groups = models.ManyToManyField(
         'auth.Group',

@@ -1,5 +1,5 @@
 {
-  "homePage": {
+ 
     "swipper": [
       {"id": 1, "name": {"ru": "Английский язык", "en": "English Language", "tj": "Забони англисӣ"}, "title": {"ru": "И построй уверенное будущее вместе с нами.", "en": "Build a confident future with us.", "tj": "Бо мо ояндаи боэътимод соз"}, "bgClass": "swiper1"},
       {"id": 2, "name": {"ru": "Английский язык", "en": "English Language", "tj": "Забони англисӣ"}, "title": {"ru": "И построй уверенное будущее вместе с нами.", "en": "Build a confident future with us.", "tj": "Бо мо ояндаи боэътимод соз"}, "bgClass": "swiper2"},
@@ -57,5 +57,5 @@
       {"id": 2, "title": {"ru": "Овладей английским языком вместе с нами!", "en": "Master English with Us!", "tj": "Забони англисиро бо мо омӯзед!"}, "description": {"ru": "Сегодня знание английского — ключ к успешной карьере и образованию. Это язык международного общения, науки, технологий и бизнеса. Владение английским открывает двери к новым возможностям, работе в международных компаниях и путешествиям без границ.", "en": "Today, knowledge of English is the key to a successful career and education. It is the language of international communication, science, technology, and business. Knowing English opens doors to new opportunities, work in international companies, and travel without borders.", "tj": "Имрӯз дониши забони англисӣ калиди касб ва таҳсили муваффақ аст. Ин забони муоширати байналмилалӣ, илм, технология ва тиҷорат аст. Омӯзиши забони англисӣ дари имкониятҳои нав, кор дар ширкатҳои байналмилалӣ ва сафарҳои беҳадро кушода мекунад."}, "backgroundImage": "/imagesVacancy/photo_2025-09-25_20-56-23.jpg"},
       {"id": 3, "title": {"ru": "Выучи английский язык всего за 1 год!", "en": "Learn English in Just 1 Year!", "tj": "Забони англисиро танҳо дар 1 сол омӯзед!"}, "description": {"ru": "Освойте разговорный и профессиональный английский в A Plus от 4 месяцев до 1 года и откройте для себя безграничные возможности для учёбы, карьеры и путешествий.", "en": "Master conversational and professional English at A Plus from 4 months to 1 year and discover limitless opportunities for study, career, and travel.", "tj": "Забони англисии гуфтугӯӣ ва касбиро дар A Plus аз 4 моҳ то 1 сол омӯзед ва имкониятҳои бепоёни таҳсил, касб ва сафарро кашф кунед."}, "backgroundImage": "/imagesVacancy/photo_2025-09-25_20-56-26.jpg"}
     ]
-  }
+  
 }
