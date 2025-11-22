@@ -1,23 +1,23 @@
-# users/models.py
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
 
-class CustomUser(AbstractUser):
-    number_phone = models.CharField(max_length=20, unique=True)
-    fullname = models.CharField(max_length=255)
+class User(AbstractUser):
+    phone_number = models.CharField(max_length=15, unique=True)
+    otp_code = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
 
+    # барои ҳал кардани clash бо auth.User
     groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='customuser_set',  # default 'user_set' тағйир додем
+        Group,
+        related_name='custom_user_set',  # default 'user_set' clash мекунад
         blank=True,
-        help_text='The groups this user belongs to.',
-        verbose_name='groups',
+        help_text='The groups this user belongs to.'
+    )
+    user_permissions = models.ManyToManyField(
+        Permission,
+        related_name='custom_user_set_permissions',  # default clash
+        blank=True,
+        help_text='Specific permissions for this user.'
     )
 
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='customuser_permissions_set',  # default 'user_set' тағйир додем
-        blank=True,
-        help_text='Specific permissions for this user.',
-        verbose_name='user permissions',
-    )
+    REQUIRED_FIELDS = ['phone_number']

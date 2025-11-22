@@ -11,7 +11,6 @@ from .serializers import FAQPageSerializer, FAQTextSerializer
 class FAQTextListCreateView(generics.ListCreateAPIView):
     queryset = FAQText.objects.all()
     serializer_class = FAQTextSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     @swagger_auto_schema(operation_summary="List or Create FAQText")
     def get(self, request, *args, **kwargs):
@@ -25,7 +24,6 @@ class FAQTextListCreateView(generics.ListCreateAPIView):
 class FAQTextDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = FAQText.objects.all()
     serializer_class = FAQTextSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     @swagger_auto_schema(operation_summary="Retrieve, Update or Delete FAQText")
     def get(self, request, *args, **kwargs):
@@ -36,7 +34,6 @@ class FAQTextDetailView(generics.RetrieveUpdateDestroyAPIView):
 class FAQPageListCreateView(generics.ListCreateAPIView):
     queryset = FAQPage.objects.all()
     serializer_class = FAQPageSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     @swagger_auto_schema(operation_summary="List or Create FAQ Pages")
     def get(self, request, *args, **kwargs):

@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'test_page',      # <- инро илова кун
     "users",
     'faqs',
+        'vacancy',
+        'admins',
         
 ]
 
@@ -166,3 +168,11 @@ SIMPLE_JWT = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+
+# settings.py
+SMS_LOGIN = "maximus144196"
+SMS_HASH = "d92d6db94d88a980e9f12dc72445093b"
+SMS_SENDER = "А-Plus LC"
+SMS_SERVER = "https://api.osonsms.com/sendsms_v1.php"
+
+    

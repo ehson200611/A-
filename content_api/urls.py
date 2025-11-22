@@ -36,7 +36,9 @@ urlpatterns = [
     path("api/teachers/", include("teacher_page.urls")),      # Teachers
     path("api/homepage/", include("home_page.urls")),         # Homepage
     path("api/tests-page/", include("test_page.urls")),       # Test Page
-    path("api/faqs/", include("faqs.urls")),                  # FAQs
+    path("api/faqs/", include("faqs.urls")),   
+                   path("api/vacancy/", include("vacancy.urls")),
+               # FAQs
 
     # ===================== DOCUMENTATION =====================
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
@@ -45,4 +47,10 @@ urlpatterns = [
 
     # ===================== ROOT REDIRECT =====================
     path("", RedirectView.as_view(url="/swagger/", permanent=False)),
+]
+
+
+urlpatterns += [
+    path('admin/', admin.site.urls),
+    path('api/admin-app/', include('admins.urls')),  # Инҷо номи app-и шумо
 ]

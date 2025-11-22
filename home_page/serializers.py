@@ -1,15 +1,19 @@
-from rest_framework import serializers
+from rest_framework import serializers, viewsets, status
+
+
 from .models import (
-    SwiperItem, Feature, WhyUsItem, Stat, Partner,
-    Testimonial, GalleryItem, Course, InfoSwiperItem
+    SwiperItem, Feature, WhyUsItem, Stat, Partner, Testimonial, GalleryItem, Course, InfoSwiperItem
 )
 
+# =============================
+# SERIALIZERS
+# =============================
 
 class SwiperItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = SwiperItem
-        fields = "__all__"
-        
+        fields = '__all__'
+
 class FeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feature
@@ -49,3 +53,4 @@ class InfoSwiperSerializer(serializers.ModelSerializer):
     class Meta:
         model = InfoSwiperItem
         fields = '__all__'
+

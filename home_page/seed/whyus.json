@@ -1,6 +1,6 @@
 [
     {
-      "id": 1,
+      "id": "1",
       "name": {
         "ru": "Обучение ведется на английском, русском и таджикском языках.",
         "en": "Lessons are conducted in English, Russian, and Tajik.",
@@ -8,7 +8,7 @@
       }
     },
     {
-      "id": 2,
+      "id": "2",
       "name": {
         "ru": "Вы научитесь свободно общаться в путешествиях, работе и учёбе ",
         "en": "You will learn to communicate freely while traveling, working, and studying ",
@@ -16,7 +16,7 @@
       }
     },
     {
-      "id": 3,
+      "id": "3",
       "name": {
         "ru": "Наши преподаватели имеют международные сертификаты (IELTS, TESOL)",
         "en": "Our teachers have international certificates (IELTS, TESOL)",
@@ -24,7 +24,7 @@
       }
     },
     {
-      "id": 4,
+      "id": "4",
       "name": {
         "ru": "Вы увидите прогресс уже через 1 месяц. Тестирование знаний и практика каждую неделю",
         "en": "You will see progress in just 1 month. Weekly knowledge testing and practice",
@@ -32,7 +32,7 @@
       }
     },
     {
-      "id": 5,
+      "id": "5",
       "name": {
         "ru": "Мы обучаем по международным стандартам. Подготовка к экзаменам IELTS, TOEFL, CEFR",
         "en": "We teach according to international standards. Preparation for IELTS, TOEFL, CEFR",
@@ -40,7 +40,7 @@
       }
     },
     {
-      "id": 6,
+      "id": "6",
       "name": {
         "ru": "Английский откроет вам новые возможности. Учёба за границей, и новые знакомства",
         "en": "English will open new opportunities. Study abroad and new connections",

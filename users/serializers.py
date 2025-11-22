@@ -1,27 +1,9 @@
-# users/serializers.py
 from rest_framework import serializers
-from .models import CustomUser
+from .models import User
 
-class UserRegisterSerializer(serializers.ModelSerializer):
-    password_confirm = serializers.CharField(write_only=True)
+class UserLoginSMSSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
 
-    class Meta:
-        model = CustomUser
-        fields = ['username', 'fullname','number_phone', 'password', 'password_confirm']
-        extra_kwargs = {'password': {'write_only': True}}
-
-    def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({"password": "Passwords must match."})
-        return attrs
-
-    def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        user = CustomUser.objects.create_user(
-
-            username=validated_data['username'],
-            fullname=validated_data['username'],
-            number_phone=validated_data['number_phone'],
-            password=validated_data['password']
-        )
-        return user
+class VerifyOTPSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    otp = serializers.CharField(max_length=6)
