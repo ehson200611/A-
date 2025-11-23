@@ -6,10 +6,9 @@ from .serializers import *
 
 
 class SwiperItemViewSet(viewsets.ModelViewSet):
-    queryset = SwiperItem.objects.all()
+    queryset = SwiperItem.objects.all().order_by('order')
     serializer_class = SwiperItemSerializer
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser] 
 
 class FeatureViewSet(viewsets.ModelViewSet):
     queryset = Feature.objects.all()
@@ -35,10 +34,14 @@ class PartnerViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
 
+from rest_framework import viewsets
+from .models import Testimonial
+from .serializers import TestimonialSerializer
+
 class TestimonialViewSet(viewsets.ModelViewSet):
     queryset = Testimonial.objects.all()
     serializer_class = TestimonialSerializer
-    permission_classes = [AllowAny]
+
     parser_classes = [MultiPartParser, FormParser]
 
 class GalleryViewSet(viewsets.ModelViewSet):

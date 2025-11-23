@@ -9,10 +9,14 @@ from .models import (
 # SERIALIZERS
 # =============================
 
+from rest_framework import serializers
+from .models import SwiperItem
+
 class SwiperItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = SwiperItem
-        fields = '__all__'
+        fields = ['id', 'name', 'title', 'href', 'image', 'order']
+
 
 class FeatureSerializer(serializers.ModelSerializer):
     class Meta:

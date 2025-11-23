@@ -2,14 +2,26 @@ from django.db import models
 
 
 # --- SWIPER ---
+from django.db import models
+
 class SwiperItem(models.Model):
-    name = models.JSONField()
-    title = models.JSONField()
-    href = models.CharField(max_length=255, blank=True)
-    image = models.ImageField(upload_to="swiper/", blank=True, null=True)
+    name = models.JSONField(null=True, blank=True)
+    title = models.JSONField(null=True, blank=True)
+    href = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='swiper/', null=True, blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        if self.order == 0:
+            last_order = SwiperItem.objects.aggregate(models.Max('order'))['order__max'] or 0
+            self.order = last_order + 1
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.name.get("en", "Swiper Item")
+        return str(self.name)
+
+
+
 
 
 # --- FEATURE ---
@@ -74,16 +86,22 @@ class Partner(models.Model):
 
 
 # --- TESTIMONIAL ---
+from django.db import models
+
 class Testimonial(models.Model):
     order = models.PositiveIntegerField(default=0)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    age = models.CharField(max_length=10, blank=True, null=True)
+    review = models.JSONField()    # {"ru": "...", "en": "...", "tj": "..."}
     video = models.CharField(max_length=500, blank=True)
-    name = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='testimonials/', blank=True, null=True)
 
     class Meta:
         ordering = ['order']
 
     def __str__(self):
-        return self.name
+        return self.name.get("en", "Testimonial")
+
 
 
 # --- GALLERY ---

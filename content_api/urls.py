@@ -8,6 +8,8 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from django.conf import settings
+from django.conf.urls.static import static
 
 # Swagger schema
 schema_view = get_schema_view(
@@ -54,3 +56,7 @@ urlpatterns += [
     path('admin/', admin.site.urls),
     path('api/admin-app/', include('admins.urls')),  # Инҷо номи app-и шумо
 ]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
