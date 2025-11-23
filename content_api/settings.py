@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'faqs',
         'vacancy',
         'admins',
-        
+        'contact',
+        'coursepage',
 ]
 
 MIDDLEWARE = [

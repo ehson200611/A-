@@ -4,10 +4,7 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.views.generic import RedirectView
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -25,22 +22,24 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    # ===================== AUTH & USERS =====================
-    path("api/users/", include("users.urls")),  # 👉 Register / Login / Profile
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),  # JWT Login
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),  # Refresh JWT
-
     # ===================== ADMIN =====================
     path("admin/", admin.site.urls),
 
-    # ===================== APP APIs =====================
-    path("api/tests/", include("tests.urls")),                # Tests
-    path("api/teachers/", include("teacher_page.urls")),      # Teachers
-    path("api/homepage/", include("home_page.urls")),         # Homepage
-    path("api/tests-page/", include("test_page.urls")),       # Test Page
-    path("api/faqs/", include("faqs.urls")),   
-                   path("api/vacancy/", include("vacancy.urls")),
-               # FAQs
+    # ===================== AUTH & USERS =====================
+    path("users/", include("users.urls")),         # Register / Login / Profile
+    path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),  
+    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),  
+
+    # ===================== APPS =====================
+    path("admin-app/", include("admins.urls")),    # Admin App
+    path("faqs/", include("faqs.urls")),          # FAQs
+    path("homepage/", include("home_page.urls")), # Homepage
+    path("teachers/", include("teacher_page.urls")), # Teachers
+    path("tests/", include("tests.urls")),        # Tests
+    path("test-page/", include("test_page.urls")),# Test Page
+    path("vacancy/", include("vacancy.urls")),    # Vacancy
+    path("coursepage/", include("coursepage.urls")), # Course Page
+    path("", include("contact.urls")),            # Contacts
 
     # ===================== DOCUMENTATION =====================
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
@@ -50,13 +49,6 @@ urlpatterns = [
     # ===================== ROOT REDIRECT =====================
     path("", RedirectView.as_view(url="/swagger/", permanent=False)),
 ]
-
-
-urlpatterns += [
-    path('admin/', admin.site.urls),
-    path('api/admin-app/', include('admins.urls')),  # Инҷо номи app-и шумо
-]
-
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

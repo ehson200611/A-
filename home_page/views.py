@@ -1,8 +1,14 @@
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework import viewsets
 from rest_framework.parsers import MultiPartParser, FormParser
-from .models import *
-from .serializers import *
+from .models import SwiperItem, Feature, Testimonial, Course, GalleryItem, Partner, Stat, WhyUsItem, InfoSwiperItem
+from .serializers import (
+    SwiperItemSerializer, FeatureSerializer, TestimonialSerializer,
+    CourseSerializer, GalleryItemSerializer, PartnerSerializer,
+    StatSerializer, WhyUsItemSerializer, InfoSwiperItemSerializer
+)
+
+class BaseViewSet(viewsets.ModelViewSet):
+    parser_classes = [MultiPartParser, FormParser]
 
 
 class SwiperItemViewSet(viewsets.ModelViewSet):
@@ -10,54 +16,42 @@ class SwiperItemViewSet(viewsets.ModelViewSet):
     serializer_class = SwiperItemSerializer
     parser_classes = [MultiPartParser, FormParser] 
 
-class FeatureViewSet(viewsets.ModelViewSet):
+
+class FeatureViewSet(BaseViewSet):
     queryset = Feature.objects.all()
     serializer_class = FeatureSerializer
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
 
-class WhyUsViewSet(viewsets.ModelViewSet):
-    queryset = WhyUsItem.objects.all()
-    serializer_class = WhyUsSerializer
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
-
-class StatViewSet(viewsets.ModelViewSet):
-    queryset = Stat.objects.all()
-    serializer_class = StatSerializer
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
-
-class PartnerViewSet(viewsets.ModelViewSet):
-    queryset = Partner.objects.all()
-    serializer_class = PartnerSerializer
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
-
-from rest_framework import viewsets
-from .models import Testimonial
-from .serializers import TestimonialSerializer
 
 class TestimonialViewSet(viewsets.ModelViewSet):
     queryset = Testimonial.objects.all()
     serializer_class = TestimonialSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
-    parser_classes = [MultiPartParser, FormParser]
-
-class GalleryViewSet(viewsets.ModelViewSet):
-    queryset = GalleryItem.objects.all()
-    serializer_class = GallerySerializer
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
-
-class CourseViewSet(viewsets.ModelViewSet):
+class CourseViewSet(BaseViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
 
-class InfoSwiperViewSet(viewsets.ModelViewSet):
+class GalleryItemViewSet(BaseViewSet):
+    queryset = GalleryItem.objects.all()
+    serializer_class = GalleryItemSerializer
+
+class PartnerViewSet(BaseViewSet):
+    queryset = Partner.objects.all()
+    serializer_class = PartnerSerializer
+    
+from rest_framework.viewsets import ModelViewSet
+from .models import Stat
+from .serializers import StatSerializer
+
+class StatViewSet(ModelViewSet):
+    queryset = Stat.objects.all()
+    serializer_class = StatSerializer
+
+
+class WhyUsItemViewSet(BaseViewSet):
+    queryset = WhyUsItem.objects.all()
+    serializer_class = WhyUsItemSerializer
+
+class InfoSwiperItemViewSet(BaseViewSet):
     queryset = InfoSwiperItem.objects.all()
-    serializer_class = InfoSwiperSerializer
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
+    serializer_class = InfoSwiperItemSerializer

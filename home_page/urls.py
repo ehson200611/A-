@@ -1,26 +1,22 @@
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-
+from django.urls import path, include
 from .views import (
-    SwiperItemViewSet, FeatureViewSet, WhyUsViewSet, StatViewSet, PartnerViewSet,
-    TestimonialViewSet, GalleryViewSet, CourseViewSet, InfoSwiperViewSet
+    SwiperItemViewSet, FeatureViewSet, TestimonialViewSet,
+    CourseViewSet, GalleryItemViewSet, PartnerViewSet,
+    StatViewSet, WhyUsItemViewSet, InfoSwiperItemViewSet
 )
 
 router = DefaultRouter()
-
-# ================================
-# COMBINED IMAGE + TEXT ROUTES
-# ================================
-router.register(r'swiper', SwiperItemViewSet, basename='swiper')
-router.register(r'feature', FeatureViewSet, basename='feature')
-router.register(r'whyus', WhyUsViewSet, basename='whyus')
-router.register(r'stat', StatViewSet, basename='stat')
-router.register(r'partner', PartnerViewSet, basename='partner')
-router.register(r'testimonial', TestimonialViewSet, basename='testimonial')
-router.register(r'gallery', GalleryViewSet, basename='gallery')
-router.register(r'course', CourseViewSet, basename='course')
-router.register(r'infoswiper', InfoSwiperViewSet, basename='infoswiper')
+router.register(r'swiper-items', SwiperItemViewSet)
+router.register(r'features', FeatureViewSet)
+router.register(r'testimonials', TestimonialViewSet)
+router.register(r'courses', CourseViewSet)
+router.register(r'gallery-items', GalleryItemViewSet)
+router.register(r'partners', PartnerViewSet)
+router.register(r'stats', StatViewSet)
+router.register(r'why-us', WhyUsItemViewSet)
+router.register(r'info-swiper', InfoSwiperItemViewSet)
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('api/', include(router.urls)),
 ]

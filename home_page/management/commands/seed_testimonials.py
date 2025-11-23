@@ -1,57 +1,45 @@
-# home_page/management/commands/seed_testimonials.py
-import os
-import json
 from django.core.management.base import BaseCommand
 from home_page.models import Testimonial
-from django.conf import settings
 
 class Command(BaseCommand):
-    help = "Seed Testimonial items from JSON file"
+    help = "Seed initial testimonials"
 
     def handle(self, *args, **kwargs):
-        # Пайдо кардани роҳи пурраи файли JSON
-        json_path = os.path.join(settings.BASE_DIR, "home_page/seed/testimonials.json")
-        
-        if not os.path.exists(json_path):
-            self.stdout.write(self.style.ERROR(f"JSON file not found: {json_path}"))
-            return
+        testimonials_data = [
+            {
+                "name": {"ru": "Алишер Насимов", "en": "Alisher Nasimov", "tj": "Алишер Насимов"},
+                "age": "25",
+                "review": {
+                    "ru": "Отличный учебный центр! Преподаватели очень профессиональные и внимательные. За 6 месяцев мой английский улучшился с начального до среднего уровня.",
+                    "en": "Excellent educational center! Teachers are very professional and attentive. In 6 months my English improved from beginner to intermediate level.",
+                    "tj": "Маркази таҳсилии аъло! Омӯзгорон хеле касбӣ ва диққатманд ҳастанд. Дар 6 моҳ забони англисии ман аз сатҳи оғозӣ то миёнаравӣ беҳтар шуд."
+                },
+                "image": ""
+            },
+            {
+                "name": {"ru": "Мария Иванова", "en": "Maria Ivanova", "tj": "Мария Иванова"},
+                "age": "22",
+                "review": {
+                    "ru": "Очень довольна обучением. Атмосфера дружелюбная, материалы современные. Особенно понравились разговорные клубы с носителями языка.",
+                    "en": "Very satisfied with the training. The atmosphere is friendly, the materials are modern. I especially liked the speaking clubs with native speakers.",
+                    "tj": "Аз таҳсил хеле хурсандям. Фазо дӯстона, маводҳо муосир. Бештар аз ҳама клубҳои суҳбат бо забони модарӣ маъқул шуд."
+                },
+                "image": ""
+            }
+        ]
 
-        # Хондани файл бо UTF-8-SIG барои пешгирии BOM
-        try:
-            with open(json_path, "r", encoding="utf-8-sig") as f:
-                data = json.load(f)
-        except json.JSONDecodeError as e:
-            self.stdout.write(self.style.ERROR(f"Error decoding JSON: {e}"))
-            return
-
-        # Хориҷ кардани ҳамаи Testimonial-ҳои қаблӣ
-        Testimonial.objects.all().delete()
-
-        # Эҷоди объекти нав
-        created_count = 0
-        for item in data:
-            try:
-                # Агар поле image вуҷуд надошта бошад, барои Model CharField
-                image = item.get("image", "")
-
-                # Ҷойгир кардани номи JSON
-                name_dict = item.get("name", {})
-                name_en = name_dict.get("en", "")
-                name_ru = name_dict.get("ru", "")
-                name_tj = name_dict.get("tj", "")
-
-                # Ҷойгир кардани review ба текст
-                review_dict = item.get("review", {})
-                review_text = review_dict.get("en", "")  # Агар дар Model танҳо як поле text вуҷуд дошта бошад
-
-                # Эҷоди объекти Testimonial
-                Testimonial.objects.create(
-                    order=int(item.get("id", created_count + 1)),
-                    name=name_en,
-                    video=image  # Агар шумо видеоро истифода мекунед, агар не, метавонед поле дигари CharField созед
-                )
-                created_count += 1
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Error creating item: {item}. Exception: {e}"))
-
-        self.stdout.write(self.style.SUCCESS(f"{created_count} Testimonial items seeded successfully!"))
+        for index, data in enumerate(testimonials_data, start=1):
+            Testimonial.objects.update_or_create(
+                order=index,
+                defaults={
+                    "name_ru": data["name"]["ru"],
+                    "name_en": data["name"]["en"],
+                    "name_tj": data["name"]["tj"],
+                    "age": data.get("age", ""),
+                    "review_ru": data["review"]["ru"],
+                    "review_en": data["review"]["en"],
+                    "review_tj": data["review"]["tj"],
+                    "image": data.get("image", "")
+                }
+            )
+        self.stdout.write(self.style.SUCCESS("Testimonials seeded successfully."))

@@ -5,11 +5,19 @@ from django.db import models
 from django.db import models
 
 class SwiperItem(models.Model):
-    name = models.JSONField(null=True, blank=True)
-    title = models.JSONField(null=True, blank=True)
-    href = models.CharField(max_length=255)
-    image = models.ImageField(upload_to='swiper/', null=True, blank=True)
     order = models.PositiveIntegerField(default=0)
+    href = models.CharField(max_length=255, blank=True)
+    image = models.ImageField(upload_to='swiper/', null=True, blank=True)
+    
+    # Title fields for each language
+    title_ru = models.CharField(max_length=255)
+    title_en = models.CharField(max_length=255)
+    title_tj = models.CharField(max_length=255)
+    
+    # Optional: Name fields if needed
+    name_ru = models.CharField(max_length=255, blank=True)
+    name_en = models.CharField(max_length=255, blank=True)
+    name_tj = models.CharField(max_length=255, blank=True)
 
     def save(self, *args, **kwargs):
         if self.order == 0:
@@ -18,8 +26,7 @@ class SwiperItem(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.name)
-
+        return self.title_en
 
 
 
@@ -61,10 +68,7 @@ class WhyUsItem(models.Model):
 class Stat(models.Model):
     order = models.PositiveIntegerField(default=0)
     number = models.CharField(max_length=50)
-    title_ru = models.CharField(max_length=255)
-    title_en = models.CharField(max_length=255)
-    title_tj = models.CharField(max_length=255)
-    image = models.ImageField(upload_to="stats/", blank=True, null=True)
+  
 
     class Meta:
         ordering = ['order']
@@ -90,17 +94,31 @@ from django.db import models
 
 class Testimonial(models.Model):
     order = models.PositiveIntegerField(default=0)
-    name = models.CharField(max_length=255, null=True, blank=True)
-    age = models.CharField(max_length=10, blank=True, null=True)
-    review = models.JSONField()    # {"ru": "...", "en": "...", "tj": "..."}
-    video = models.CharField(max_length=500, blank=True)
-    image = models.ImageField(upload_to='testimonials/', blank=True, null=True)
+    
+    # Name
+    name_ru = models.CharField(max_length=255)
+    name_en = models.CharField(max_length=255)
+    name_tj = models.CharField(max_length=255)
+    
+    # Age
+    age = models.CharField(max_length=10, blank=True)
+    
+    # Review
+    review_ru = models.TextField(blank=True)
+    review_en = models.TextField(blank=True)
+    review_tj = models.TextField(blank=True)
+    
+    # Image
+    image = models.ImageField(upload_to="testimonials/", blank=True, null=True)
 
     class Meta:
         ordering = ['order']
 
     def __str__(self):
-        return self.name.get("en", "Testimonial")
+        return self.name_en
+
+
+
 
 
 

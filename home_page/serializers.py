@@ -1,13 +1,8 @@
-from rest_framework import serializers, viewsets, status
+from rest_framework import serializers
+from .models import SwiperItem, Feature, Testimonial, Course, GalleryItem, Partner, Stat, WhyUsItem, InfoSwiperItem
 
-
-from .models import (
-    SwiperItem, Feature, WhyUsItem, Stat, Partner, Testimonial, GalleryItem, Course, InfoSwiperItem
-)
-
-# =============================
-# SERIALIZERS
-# =============================
+from rest_framework import serializers
+from .models import SwiperItem
 
 from rest_framework import serializers
 from .models import SwiperItem
@@ -15,7 +10,12 @@ from .models import SwiperItem
 class SwiperItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = SwiperItem
-        fields = ['id', 'name', 'title', 'href', 'image', 'order']
+        fields = [
+            'id', 'order', 'href', 'image',
+            'title_ru', 'title_en', 'title_tj',
+            'name_ru', 'name_en', 'name_tj'
+        ]
+
 
 
 class FeatureSerializer(serializers.ModelSerializer):
@@ -23,14 +23,24 @@ class FeatureSerializer(serializers.ModelSerializer):
         model = Feature
         fields = '__all__'
 
-class WhyUsSerializer(serializers.ModelSerializer):
+from rest_framework import serializers
+from .models import Testimonial
+
+
+class TestimonialSerializer(serializers.ModelSerializer):
     class Meta:
-        model = WhyUsItem
+        model = Testimonial
+        fields = "__all__"
+
+
+class CourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
         fields = '__all__'
 
-class StatSerializer(serializers.ModelSerializer):
+class GalleryItemSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Stat
+        model = GalleryItem
         fields = '__all__'
 
 class PartnerSerializer(serializers.ModelSerializer):
@@ -38,23 +48,18 @@ class PartnerSerializer(serializers.ModelSerializer):
         model = Partner
         fields = '__all__'
 
-class TestimonialSerializer(serializers.ModelSerializer):
+
+class StatSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Testimonial
+        model = Stat
+        fields = ['order', 'number'] 
+
+class WhyUsItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WhyUsItem
         fields = '__all__'
 
-class GallerySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = GalleryItem
-        fields = '__all__'
-
-class CourseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Course
-        fields = '__all__'
-
-class InfoSwiperSerializer(serializers.ModelSerializer):
+class InfoSwiperItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = InfoSwiperItem
         fields = '__all__'
-
