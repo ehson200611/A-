@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'home_page', 
     'test_page',      # <- инро илова кун
     "users",
-    'faqs',
+    'faq',
         'vacancy',
         'admins',
         'contact',

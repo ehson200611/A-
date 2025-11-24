@@ -32,7 +32,7 @@ urlpatterns = [
 
     # ===================== APPS =====================
     path("admin-app/", include("admins.urls")),    # Admin App
-    path("faqs/", include("faqs.urls")),          # FAQs
+    path("faq/", include("faq.urls")),          # FAQs
     path("homepage/", include("home_page.urls")), # Homepage
     path("teachers/", include("teacher_page.urls")), # Teachers
     path("tests/", include("tests.urls")),        # Tests
