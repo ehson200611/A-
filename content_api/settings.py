@@ -105,9 +105,13 @@ DATABASES = {
 
 
 SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': False,
-    'DEFAULT_MODEL_RENDERING': 'example',
-    'DISPLAY_OPERATION_ID': True,
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    }
 }
 
 # Password validation
