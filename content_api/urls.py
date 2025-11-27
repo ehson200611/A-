@@ -37,8 +37,8 @@ urlpatterns = [
     path("test-page/", include("test_page.urls")),# Test Page
     path("vacancy/", include("vacancy.urls")),    # Vacancy
     path("coursepage/", include("coursepage.urls")), # Course Page
-    path("", include("contact.urls")),            # Contacts
-
+    path("contact/", include("contact.urls")),            # Contacts
+    path('blogs/', include('blogs.urls')),  # 👈 Register blogs API
     # ===================== DOCUMENTATION =====================
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),

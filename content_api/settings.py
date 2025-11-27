@@ -52,6 +52,7 @@ INSTALLED_APPS = [
         'authenticator',
         'contact',
         'coursepage',
+        'blogs'
 ]
 
 MIDDLEWARE = [
