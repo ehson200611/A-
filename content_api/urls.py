@@ -26,12 +26,10 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # ===================== AUTH & USERS =====================
-    path("users/", include("users.urls")),         # Register / Login / Profile
-    path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),  
-    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),  
+    
 
     # ===================== APPS =====================
-    path("admin-app/", include("admins.urls")),    # Admin App
+    path("admin-app/", include("authenticator.urls")),    # Admin App
     path("faq/", include("faq.urls")),          # FAQs
     path("homepage/", include("home_page.urls")), # Homepage
     path("teachers/", include("teacher_page.urls")), # Teachers

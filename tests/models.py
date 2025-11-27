@@ -1,4 +1,5 @@
 from django.db import models
+from authenticator.models import UserProfile
 
 LEVEL_CHOICES = [
     ('A1', 'A1'),
@@ -12,9 +13,22 @@ LEVEL_CHOICES = [
 class Question(models.Model):
     level = models.CharField(max_length=2, choices=LEVEL_CHOICES)
     question = models.TextField()
-    options = models.JSONField()  # рӯйхати ҷавобҳо
+    options = models.JSONField()
     correctAnswer = models.IntegerField()
     explanation = models.TextField()
 
     def __str__(self):
         return f"{self.level}: {self.question[:60]}"
+
+
+class TestResult(models.Model):
+    profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    level = models.CharField(max_length=2, choices=LEVEL_CHOICES)
+    totalQuestions = models.IntegerField()
+    correctAnswers = models.IntegerField()
+    incorrectAnswers = models.IntegerField()
+    score = models.IntegerField()
+    dateCompleted = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.profile.user.username} - {self.level} - {self.score}"
