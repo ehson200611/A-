@@ -37,10 +37,14 @@ class BaseCourse(models.Model):
         abstract = True
 
 class EnglishCourse(BaseCourse):
-    pass
+    subject_ru = models.TextField(blank=True)
+    subject_en = models.TextField(blank=True)
+    subject_tj = models.TextField(blank=True)
 
 class RussianCourse(BaseCourse):
-    pass
+    subject_ru = models.TextField(blank=True)
+    subject_en = models.TextField(blank=True)
+    subject_tj = models.TextField(blank=True)
 
 class PreSchoolCourse(BaseCourse):
     subject_ru = models.TextField(blank=True)

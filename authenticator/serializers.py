@@ -1,9 +1,7 @@
 from rest_framework import serializers
-from django.contrib.auth import authenticate
 from .models import AdminUser, NotificationAdmin, UserProfile
 from tests.models import TestResult
 from tests.serializers import TestResultSerializer
-
 
 class RegisterSerializer(serializers.ModelSerializer):
     passwordConfirm = serializers.CharField(write_only=True)
@@ -51,7 +49,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return TestResultSerializer(results, many=True).data
 
 
-# Новые сериализаторы для управления пользователями
 class AdminUserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdminUser

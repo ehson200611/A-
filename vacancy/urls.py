@@ -1,10 +1,13 @@
+# urls.py (намуна)
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import VacancyUserViewSet,VacancyQuestionViewSet
+from . import views
 
 router = DefaultRouter()
-router.register("vacancy-user", VacancyUserViewSet)
-router.register(r'vacancy-questions', VacancyQuestionViewSet, basename='vacancy-question')
+router.register(r'vacancy-users', views.VacancyUserViewSet)
+router.register(r'vacancy-questions', views.VacancyQuestionViewSet)
+router.register(r'vacancy-works', views.VacancyWorkViewSet)
+
 urlpatterns = [
-    path("", include(router.urls)),
+    path('api/', include(router.urls)),
 ]

@@ -31,7 +31,7 @@ class AdminUser(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="user")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(default=timezone.now)  # Используем timezone.now вместо auto_now_add
+    date_joined = models.DateTimeField(default=timezone.now)
 
     objects = AdminUserManager()
 
@@ -74,7 +74,7 @@ class UserProfile(models.Model):
     phone = models.CharField(max_length=20)
 
     def __str__(self):
-        return self.user.username
+        return f"{self.user.name} - {self.phone}"
 
     @property
     def tests(self):
