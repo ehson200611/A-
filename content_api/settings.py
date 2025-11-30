@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'coursepage',
     'blogs',
     'feedback',
+    'bookpage'
 ]
 
 MIDDLEWARE = [
@@ -93,11 +94,14 @@ DATABASES = {
 
 # REST Framework configuration - БЕШТАР ДАСТРАС
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ]
 }
+
 
 # Swagger settings
 SWAGGER_SETTINGS = {
@@ -132,12 +136,20 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Media files
+import os
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom user model
 AUTH_USER_MODEL = "authenticator.AdminUser"
+
+import os
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+PROTECTED_ROOT = os.path.join(BASE_DIR, "protected_media")

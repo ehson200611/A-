@@ -126,24 +126,17 @@ class AdminUserViewSet(viewsets.ModelViewSet):
 # --- NOTIFICATIONS ---
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
-    permission_classes = [IsAuthenticated]  # ✅ Танҳо authentication лозим аст
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return NotificationAdmin.objects.none()
-        if not self.request.user.is_authenticated:
-            return NotificationAdmin.objects.none()
-        return NotificationAdmin.objects.filter(user=self.request.user).order_by("-date")
+        return NotificationAdmin.objects.all().order_by("-date")
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-    @action(detail=True, methods=['post'])
-    def mark_read(self, request, pk=None):
-        notif = self.get_object()
-        notif.status = "read"
-        notif.save()
-        return Response({"message": "Notification marked as read"})
+        # Если юзер не залогинен → просто сохраняем без user
+        if not self.request.user.is_authenticated:
+            serializer.save(user=None)
+        else:
+            serializer.save(user=self.request.user)
 
 
 # --- USER PROFILE ---
@@ -153,3 +146,5 @@ class UserProfileView(generics.RetrieveAPIView):
 
     def get_object(self):
         return UserProfile.objects.get(user=self.request.user)
+    
+    

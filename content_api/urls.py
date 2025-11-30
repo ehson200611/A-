@@ -40,6 +40,7 @@ urlpatterns = [
     path("contact/", include("contact.urls")),            # Contacts
     path('blogs/', include('blogs.urls')),  # 👈 Register blogs API
         path('feedback/', include('feedback.urls')), 
+            path('books/', include('bookpage.urls')),
 
     # ===================== DOCUMENTATION =====================
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
