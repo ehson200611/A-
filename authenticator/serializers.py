@@ -42,11 +42,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ['user', 'phone', 'tests']
+        fields = ['id', 'user', 'phone', 'status', 'tests']
 
     def get_tests(self, obj):
         results = TestResult.objects.filter(profile=obj)
         return TestResultSerializer(results, many=True).data
+
 
 
 class AdminUserListSerializer(serializers.ModelSerializer):

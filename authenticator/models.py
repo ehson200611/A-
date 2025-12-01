@@ -70,8 +70,15 @@ class NotificationAdmin(models.Model):
 
 
 class UserProfile(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('pending', 'Pending'),
+    ]
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)  
     phone = models.CharField(max_length=20)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
 
     def __str__(self):
         return f"{self.user.name} - {self.phone}"
@@ -79,3 +86,4 @@ class UserProfile(models.Model):
     @property
     def tests(self):
         return self.testresult_set.all()
+

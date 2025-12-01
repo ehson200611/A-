@@ -140,11 +140,23 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
 
 # --- USER PROFILE ---
-class UserProfileView(generics.RetrieveAPIView):
+class UserProfileViewSet(viewsets.ModelViewSet):
+    queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
-    permission_classes = [IsAuthenticated]  # ✅ Танҳо authentication лозим аст
+    permission_classes = [IsAuthenticated]
 
-    def get_object(self):
-        return UserProfile.objects.get(user=self.request.user)
-    
-    
+    @action(detail=True, methods=['patch'])
+    def update_status(self, request, pk=None):
+        profile = self.get_object()
+        new_status = request.data.get("status")
+
+        if new_status not in ["active", "inactive", "pending"]:
+            return Response({"error": "Invalid status"}, status=400)
+
+        profile.status = new_status
+        profile.save()
+
+        return Response({
+            "message": "Status updated",
+            "profile": UserProfileSerializer(profile).data
+        })
