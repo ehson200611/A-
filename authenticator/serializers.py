@@ -74,3 +74,36 @@ class AdminUserUpdateRoleSerializer(serializers.ModelSerializer):
         if value not in valid_roles:
             raise serializers.ValidationError(f"Role must be one of {valid_roles}")
         return value
+
+
+
+class TestAdminSerializer(serializers.ModelSerializer):
+    userName = serializers.CharField(source="profile.user.name", read_only=True)
+    status = serializers.SerializerMethodField()
+    timeSpent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestResult
+        fields = [
+            "id",
+            "userName",
+            "level",
+            "dateCompleted",
+            "timeSpent",
+            "totalQuestions",
+            "correctAnswers",
+            "incorrectAnswers",
+            "score",
+            "status",
+        ]
+
+    def get_status(self, obj):
+        if obj.correctAnswers is None:
+            return "not_started"
+        if obj.score < 100 and obj.correctAnswers + obj.incorrectAnswers < obj.totalQuestions:
+            return "in_progress"
+        return "completed"
+
+    def get_timeSpent(self, obj):
+        # Агар модели ту вақти сарфшударо надорад
+        return "N/A"

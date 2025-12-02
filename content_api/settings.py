@@ -3,6 +3,7 @@ Django settings for content_api project.
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,8 @@ INSTALLED_APPS = [
     # Third party apps
     'corsheaders',
     'rest_framework',
-    'drf_yasg',
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
 
     # Your apps
     'content',
@@ -55,8 +57,6 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
-
-# Барои кор бо session authentication дар frontend
 CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'content_api.urls'
@@ -86,28 +86,62 @@ DATABASES = {
     }
 }
 
-# REST Framework configuration - СОДДА ТАР
+# REST Framework configuration
 # settings.py
 
-# REST Framework configuration - БЕШТАР ДАСТРАС
-# settings.py
-
-# REST Framework configuration - БЕШТАР ДАСТРАС
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
-    ]
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',  # По умолчанию всё публичное
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 
-# Swagger settings
-SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': True,  # ✅ Session authentication барои Swagger
-    'LOGIN_URL': '/admin/login/',  # URL барои login
-    'LOGOUT_URL': '/admin/logout/',  # URL барои logout
+
+from datetime import timedelta
+# JWT Settings
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=60),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+}
+
+# Spectacular Settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'English Test API',
+    'DESCRIPTION': 'API барои идоракунии мундариҷаи тестҳои забони англисӣ',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    
+    'SECURITY': [
+        {
+            'Bearer': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
+        }
+    ],
+    
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+        'docExpansion': 'none',
+        'deepLinking': True,
+        'displayRequestDuration': True,
+        'filter': True,
+        'tryItOutEnabled': True,
+        'syntaxHighlight': True,
+    },
+    
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
 }
 
 # Password validation
@@ -136,20 +170,12 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-import os
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom user model
 AUTH_USER_MODEL = "authenticator.AdminUser"
-
-import os
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-PROTECTED_ROOT = os.path.join(BASE_DIR, "protected_media")
