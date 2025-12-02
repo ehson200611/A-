@@ -1,91 +1,74 @@
-from django.http import FileResponse, HttpResponseForbidden
+# bookpage/views.py
+from django.http import FileResponse
+import os
 from rest_framework import generics
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from .models import Book
 from .serializers import BookSerializer
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema
 
 
-# ---------- CREATE ----------
 class BookCreateView(generics.CreateAPIView):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
-
-    @swagger_auto_schema(
-        operation_description="Create book with PDF",
-        consumes=["multipart/form-data"],
-        manual_parameters=[
-            openapi.Parameter("title", openapi.IN_FORM, type=openapi.TYPE_STRING),
-            openapi.Parameter("pdf", openapi.IN_FORM, type=openapi.TYPE_FILE),
-        ],
-    )
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+    permission_classes = [AllowAny]
 
 
-# ---------- LIST ----------
 class BookListView(generics.ListAPIView):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
+    permission_classes = [AllowAny]
 
 
-# ---------- RETRIEVE ----------
 class BookDetailView(generics.RetrieveAPIView):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
+    permission_classes = [AllowAny]
 
 
-# ---------- UPDATE ----------
 class BookUpdateView(generics.UpdateAPIView):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
-
-    @swagger_auto_schema(
-        operation_description="Update book",
-        consumes=["multipart/form-data"],
-        manual_parameters=[
-            openapi.Parameter("title", openapi.IN_FORM, type=openapi.TYPE_STRING),
-            openapi.Parameter("pdf", openapi.IN_FORM, type=openapi.TYPE_FILE),
-        ],
-    )
-    def put(self, request, *args, **kwargs):
-        return super().put(request, *args, **kwargs)
-
-    @swagger_auto_schema(
-        operation_description="Partially update book",
-        consumes=["multipart/form-data"],
-        manual_parameters=[
-            openapi.Parameter("title", openapi.IN_FORM, type=openapi.TYPE_STRING),
-            openapi.Parameter("pdf", openapi.IN_FORM, type=openapi.TYPE_FILE),
-        ],
-    )
-    def patch(self, request, *args, **kwargs):
-        return super().patch(request, *args, **kwargs)
+    permission_classes = [AllowAny]
 
 
-# ---------- DELETE ----------
 class BookDeleteView(generics.DestroyAPIView):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
-
+    permission_classes = [AllowAny]
 
 
 class ReadBookPDFView(APIView):
-
-    @swagger_auto_schema(
-        operation_description="Read PDF inline (no download)",
-        manual_parameters=[
-            openapi.Parameter(
-                name='pk', in_=openapi.IN_PATH, type=openapi.TYPE_INTEGER,
-                description="ID of the book"
-            )
-        ],
-        responses={200: "PDF file"},
-    )
+    permission_classes = [AllowAny]
+    
     def get(self, request, pk):
-        if not request.user.is_authenticated:
-            return HttpResponseForbidden("Нет доступа")
-
-        book = Book.objects.get(pk=pk)
-        return FileResponse(open(book.pdf.path, "rb"), content_type="application/pdf")
+        try:
+            book = Book.objects.get(pk=pk)
+            
+            if not book.pdf or not os.path.exists(book.pdf.path):
+                return Response(
+                    {"error": "PDF file not found"},
+                    status=404
+                )
+            
+            pdf_file = open(book.pdf.path, 'rb')
+            
+            response = FileResponse(
+                pdf_file,
+                content_type='application/pdf'
+            )
+            response['Content-Disposition'] = f'inline; filename="{book.title}.pdf"'
+            
+            return response
+            
+        except Book.DoesNotExist:
+            return Response(
+                {"error": "Book not found"},
+                status=404
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=500
+            )

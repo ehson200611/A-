@@ -113,9 +113,10 @@ SIMPLE_JWT = {
 }
 
 # Spectacular Settings
+# settings.py
 SPECTACULAR_SETTINGS = {
     'TITLE': 'English Test API',
-    'DESCRIPTION': 'API барои идоракунии мундариҷаи тестҳои забони англисӣ',
+    'DESCRIPTION': 'API для системы тестирования',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
@@ -136,12 +137,20 @@ SPECTACULAR_SETTINGS = {
         'deepLinking': True,
         'displayRequestDuration': True,
         'filter': True,
-        'tryItOutEnabled': True,
-        'syntaxHighlight': True,
     },
     
     'SWAGGER_UI_DIST': 'SIDECAR',
     'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    
+    # Добавьте эту настройку для фиксации enum
+    'ENUM_NAME_OVERRIDES': {
+        'RoleEnum': 'authenticator.models.AdminUser.ROLE_CHOICES',
+    },
+    
+    # Опционально: отключите некоторые предупреждения
+    'PREPROCESSING_HOOKS': [
+        'drf_spectacular.hooks.preprocess_exclude_path_format',
+    ],
 }
 
 # Password validation
@@ -179,3 +188,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom user model
 AUTH_USER_MODEL = "authenticator.AdminUser"
+
+# Дополнительные настройки безопасности
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'SAMEORIGIN'  # Запрещаем встраивание в чужие сайты

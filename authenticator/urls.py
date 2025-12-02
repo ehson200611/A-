@@ -1,7 +1,7 @@
-# authenticator/urls.py
+# authenticator/urls.py (временная версия)
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
+from .simple_views import (  # Используем simple_views вместо views
     RegisterView, 
     LoginView,
     AdminUserViewSet, 
@@ -11,7 +11,7 @@ from .views import (
     TestAdminViewSet, 
     CurrentUserProfileView,
     CurrentUserNotificationsView
-)
+) 
 
 router = DefaultRouter()
 router.register(r'users', AdminUserViewSet, basename='adminuser')

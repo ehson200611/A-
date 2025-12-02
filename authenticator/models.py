@@ -79,15 +79,12 @@ class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)  
     phone = models.CharField(max_length=20)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    is_pdf = models.BooleanField(default=False)  # Только это поле
+    pdf_updated_at = models.DateTimeField(null=True, blank=True)  # Когда статус обновлен
 
     def __str__(self):
         return f"{self.user.name} - {self.phone}"
 
     @property
     def tests(self):
-        return self.testresult_set.all()
-
-
-
-
-
+        return self.testresult_set.all()    
