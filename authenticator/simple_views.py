@@ -289,12 +289,12 @@ class SuperAdminListView(APIView):
         })
 
 # --- TEST ADMIN ---
-class TestAdminViewSet(viewsets.ReadOnlyModelViewSet):
+class TestAdminViewSet(viewsets.ModelViewSet):
     serializer_class = TestAdminSerializer
     queryset = TestResult.objects.all().order_by("-dateCompleted")
     
     def get_permissions(self):
-        if self.action == 'list':
+        if self.action in ['list', 'create']:
             permission_classes = [IsAdminOrSuperAdmin]
         else:
             permission_classes = [IsAdminOrSuperAdmin]
@@ -317,6 +317,14 @@ class TestAdminViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = self.get_queryset()
         data = TestAdminSerializer(queryset, many=True).data
         return Response({"testAdmin": data})
+
+    # POST /api/test-admin/
+    def create(self, request, *args, **kwargs):
+        serializer = TestAdminSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"created": serializer.data}, status=201)
+
 
 # --- CURRENT USER NOTIFICATIONS ---
 class CurrentUserNotificationsView(generics.ListAPIView):
