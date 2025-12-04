@@ -16,6 +16,8 @@ from .serializers import (
 from .permissions import IsSuperAdmin, IsAdminOrSuperAdmin, IsOwnerOrAdmin
 from rest_framework.views import APIView
 from tests.models import TestResult
+from .token import get_tokens_for_user  # Ҷойи функсияи тавлиди токен
+
 
 User = get_user_model()
 
@@ -25,41 +27,53 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 # --- АВТОРИЗАЦИЯ ---
+from rest_framework import generics
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import authenticate
+from .serializers import LoginSerializer
+from .token import get_tokens_for_user  # Ҷойи функсияи тавлиди токен
+
 class LoginView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
 
     def post(self, request):
+        # 1. Сериализатсия кардани маълумот
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         phone_number = serializer.validated_data['phoneNumber']
         password = serializer.validated_data['password']
 
+        # 2. Верификация кардани корбар
         try:
-            user = User.objects.get(phoneNumber=phone_number)
-        except User.DoesNotExist:
+            user = authenticate(phoneNumber=phone_number, password=password)
+        except:
             return Response({"error": "Invalid credentials"}, status=400)
 
-        if not user.check_password(password):
+        if user is None:
             return Response({"error": "Invalid credentials"}, status=400)
 
-        if not user.is_active:
-            return Response({"error": "Account is deactivated"}, status=400)
+        # 3. Агар корбар дуруст бошад, токенҳо месозем
+        if user.is_active:
+            tokens = get_tokens_for_user(user)
 
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "phoneNumber": user.phoneNumber,
-                "role": user.role,
-                "is_active": user.is_active
-            }
-        }, status=200)
+            return Response({
+                "refresh": tokens["refresh"],  # Refresh token
+                "access": tokens["access"],  # Access token
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "phoneNumber": user.phoneNumber,
+                    "role": user.role,
+                    "is_active": user.is_active
+                }
+            }, status=200)
+
+        return Response({"error": "Account is deactivated"}, status=400)
+
+
 
 # --- ОТДЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ ПОЛЬЗОВАТЕЛЕЙ ---
 
