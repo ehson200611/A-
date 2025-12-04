@@ -31,4 +31,4 @@ class TestResult(models.Model):
     dateCompleted = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.profile.user.username} - {self.level} - {self.score}"
+        return f"{self.profile.user} - {self.level} - {self.score}"

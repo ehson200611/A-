@@ -19,3 +19,5 @@ class UserProfileAdmin(admin.ModelAdmin):
 class NotificationAdminAdmin(admin.ModelAdmin):
     list_display = ['title', 'user', 'type', 'status', 'date']
     list_filter = ['type', 'status', 'date']
+
+

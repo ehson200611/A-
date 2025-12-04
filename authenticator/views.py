@@ -91,6 +91,10 @@ class LoginView(generics.GenericAPIView):
             }
         }, status=200)
 
+# authenticator/views.py
+
+# ... дарозии код ...
+
 # --- ADMIN ROLE MANAGEMENT ---
 @extend_schema_view(
     list=extend_schema(
@@ -151,126 +155,181 @@ class LoginView(generics.GenericAPIView):
         }
     ),
 )
+# authenticator/simple_views.py
+# Дар охири файл илова кунед:
+
+# --- ADMIN ROLE MANAGEMENT ---
 class AdminRoleViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing admin roles (admin and superadmin users only).
+    Only accessible by superadmins.
+    """
     serializer_class = AdminRoleSerializer
     permission_classes = [IsSuperAdmin]
     
     def get_queryset(self):
+        """Return only admin and superadmin users"""
         return AdminUser.objects.filter(
             role__in=['admin', 'superadmin']
         ).order_by('-date_joined')
     
-    def perform_create(self, serializer):
-        user = serializer.save()
-        password = self.request.data.get('password')
-        if password:
-            user.set_password(password)
-            user.save()
-    
-    @extend_schema(
-        summary='Change admin password',
-        description='Change password for admin user',
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'password': {'type': 'string', 'example': 'newpassword123'},
-                    'passwordConfirm': {'type': 'string', 'example': 'newpassword123'}
-                }
-            }
-        },
-        responses={
-            200: OpenApiResponse(
-                response=AdminRoleSerializer,
-                description='Password changed successfully'
-            )
-        }
-    )
-    @action(detail=True, methods=['patch'], url_path='change-password')
-    def change_password(self, request, pk=None):
-        admin = self.get_object()
+    def create(self, request, *args, **kwargs):
+        """Create new admin with password handling"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         
+        # Check for required fields
+        if 'name' not in request.data or 'phoneNumber' not in request.data:
+            return Response(
+                {"error": "Name and phoneNumber are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if phone number exists
+        phone_number = request.data.get('phoneNumber')
+        if AdminUser.objects.filter(phoneNumber=phone_number).exists():
+            return Response(
+                {"error": "Phone number already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create user
+        password = request.data.get('password', 'default123')
+        role = request.data.get('role', 'admin')
+        
+        user = AdminUser.objects.create_user(
+            phoneNumber=phone_number,
+            name=request.data.get('name'),
+            role=role,
+            password=password,
+            is_staff=(role == 'superadmin'),
+            is_superuser=(role == 'superadmin')
+        )
+        
+        return Response(
+            AdminRoleSerializer(user).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    def update(self, request, *args, **kwargs):
+        """Update admin user"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Prevent self-modification
+        if instance.id == request.user.id:
+            return Response(
+                {"error": "Cannot modify your own account through this endpoint"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        
+        # Check phone number uniqueness
+        phone_number = request.data.get('phoneNumber')
+        if phone_number and phone_number != instance.phoneNumber:
+            if AdminUser.objects.filter(phoneNumber=phone_number).exclude(id=instance.id).exists():
+                return Response(
+                    {"error": "Phone number already exists"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Update password if provided
         password = request.data.get('password')
-        password_confirm = request.data.get('passwordConfirm')
+        if password:
+            instance.set_password(password)
         
-        if not password or not password_confirm:
+        self.perform_update(serializer)
+        
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance._prefetched_objects_cache = {}
+        
+        return Response(serializer.data)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete admin user"""
+        instance = self.get_object()
+        
+        # Prevent self-deletion
+        if instance.id == request.user.id:
             return Response(
-                {"error": "Password and password confirmation are required"},
+                {"error": "Cannot delete your own account"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if password != password_confirm:
-            return Response(
-                {"error": "Passwords do not match"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Prevent deleting last superadmin
+        if instance.role == 'superadmin':
+            superadmin_count = AdminUser.objects.filter(role='superadmin').count()
+            if superadmin_count <= 1:
+                return Response(
+                    {"error": "Cannot delete the last superadmin"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         
-        admin.set_password(password)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    @action(detail=True, methods=['post'], url_path='activate')
+    def activate_admin(self, request, pk=None):
+        """Activate admin account"""
+        admin = self.get_object()
+        admin.is_active = True
         admin.save()
         
         return Response({
-            "message": "Password changed successfully",
+            "message": "Admin activated successfully",
             "admin": AdminRoleSerializer(admin).data
         })
     
-    @extend_schema(
-        summary='Promote to superadmin',
-        description='Promote admin to superadmin role',
-        responses={
-            200: OpenApiResponse(
-                response=AdminRoleSerializer,
-                description='Admin promoted successfully'
-            )
-        }
-    )
-    @action(detail=True, methods=['post'], url_path='promote-to-superadmin')
-    def promote_to_superadmin(self, request, pk=None):
+    @action(detail=True, methods=['post'], url_path='deactivate')
+    def deactivate_admin(self, request, pk=None):
+        """Deactivate admin account"""
         admin = self.get_object()
         
         if admin.id == request.user.id:
             return Response(
-                {"error": "Cannot change your own role"},
+                {"error": "Cannot deactivate your own account"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        admin.role = 'superadmin'
-        admin.is_staff = True
-        admin.is_superuser = True
+        admin.is_active = False
         admin.save()
         
         return Response({
-            "message": "Admin promoted to superadmin successfully",
+            "message": "Admin deactivated successfully",
             "admin": AdminRoleSerializer(admin).data
         })
+
+# --- SIMPLE ADMIN STATISTICS VIEW ---
+class AdminStatisticsView(APIView):
+    """Simple admin statistics view"""
+    permission_classes = [IsSuperAdmin]
     
-    @extend_schema(
-        summary='Demote to regular user',
-        description='Demote admin to regular user role',
-        responses={
-            200: OpenApiResponse(
-                response=AdminRoleSerializer,
-                description='Admin demoted successfully'
-            )
-        }
-    )
-    @action(detail=True, methods=['post'], url_path='demote-to-user')
-    def demote_to_user(self, request, pk=None):
-        admin = self.get_object()
+    def get(self, request):
+        total_admins = AdminUser.objects.filter(
+            role__in=['admin', 'superadmin']
+        ).count()
         
-        if admin.id == request.user.id:
-            return Response(
-                {"error": "Cannot change your own role"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        superadmins = AdminUser.objects.filter(role='superadmin').count()
+        admins = AdminUser.objects.filter(role='admin').count()
         
-        admin.role = 'user'
-        admin.is_staff = False
-        admin.is_superuser = False
-        admin.save()
+        active_admins = AdminUser.objects.filter(
+            role__in=['admin', 'superadmin'],
+            is_active=True
+        ).count()
+        
+        inactive_admins = AdminUser.objects.filter(
+            role__in=['admin', 'superadmin'],
+            is_active=False
+        ).count()
         
         return Response({
-            "message": "Admin demoted to user successfully",
-            "admin": AdminRoleSerializer(admin).data
+            "total_admins": total_admins,
+            "superadmins": superadmins,
+            "admins": admins,
+            "active_admins": active_admins,
+            "inactive_admins": inactive_admins
         })
 
 # --- ADMIN USER MANAGEMENT ---

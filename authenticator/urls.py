@@ -1,16 +1,21 @@
-# authenticator/urls.py (временная версия)
+# authenticator/urls.py (обновленная версия)
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .simple_views import (  # Используем simple_views вместо views
+from .simple_views import (
     RegisterView, 
     LoginView,
     AdminUserViewSet, 
     NotificationViewSet,
     UserProfileViewSet, 
-    SuperAdminListView,
+    SuperAdminListAPIView,
+    AdminListAPIView,
+    RegularUsersListAPIView,
     TestAdminViewSet, 
     CurrentUserProfileView,
-    CurrentUserNotificationsView
+    CurrentUserNotificationsView,
+    get_superadmins,  # Импортируем отдельные функции
+    get_admins,
+    get_regular_users
 ) 
 
 router = DefaultRouter()
@@ -28,8 +33,10 @@ urlpatterns = [
     path('me/profile/', CurrentUserProfileView.as_view(), name='current-user-profile'),
     path('me/notifications/', CurrentUserNotificationsView.as_view(), name='current-user-notifications'),
     
-    # Суперадмины
-    path('superadmins/', SuperAdminListView.as_view(), name='superadmin-list'),
+    # Отдельные функции для получения пользователей (как API View)
+    path('superadmins/', SuperAdminListAPIView.as_view(), name='superadmin-list'),
+    path('admins/', AdminListAPIView.as_view(), name='admin-list'),
+    path('regular-users/', RegularUsersListAPIView.as_view(), name='regular-users-list'),
     
     # API endpoints
     path('', include(router.urls)),

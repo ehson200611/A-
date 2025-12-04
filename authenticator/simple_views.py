@@ -1,4 +1,4 @@
-# authenticator/simple_views.py
+# authenticator/simple_views.py (исправленная версия)
 from rest_framework import generics, viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -19,12 +19,12 @@ from tests.models import TestResult
 
 User = get_user_model()
 
-# --- REGISTER ---
+# --- РЕГИСТРАЦИЯ ---
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
 
-# --- LOGIN ---
+# --- АВТОРИЗАЦИЯ ---
 class LoginView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
@@ -61,7 +61,83 @@ class LoginView(generics.GenericAPIView):
             }
         }, status=200)
 
-# --- ADMIN USER MANAGEMENT (упрощенная версия) ---
+# --- ОТДЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПОЛУЧЕНИЯ ПОЛЬЗОВАТЕЛЕЙ ---
+
+def get_superadmins(request):
+    """Отдельная функция для получения суперадминов"""
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Authentication required"}, 
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    if request.user.role != 'superadmin' and not request.user.is_superuser:
+        return Response(
+            {"error": "Only superadmins can view superadmins list"}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    superadmins = AdminUser.objects.filter(role="superadmin").order_by('-date_joined')
+    serializer = AdminUserListSerializer(superadmins, many=True)
+    
+    return Response({
+        "count": superadmins.count(),
+        "superadmins": serializer.data
+    })
+
+def get_admins(request):
+    """Отдельная функция для получения админов"""
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Authentication required"}, 
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    if request.user.role not in ['superadmin', 'admin'] and not request.user.is_superuser:
+        return Response(
+            {"error": "Only admins can view admins list"}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Суперадмины видят всех админов
+    if request.user.role == 'superadmin' or request.user.is_superuser:
+        admins = AdminUser.objects.filter(role="admin").order_by('-date_joined')
+    # Обычные админы видят только других админов (но не себя)
+    else:
+        admins = AdminUser.objects.filter(
+            role="admin"
+        ).exclude(id=request.user.id).order_by('-date_joined')
+    
+    serializer = AdminUserListSerializer(admins, many=True)
+    
+    return Response({
+        "count": admins.count(),
+        "admins": serializer.data
+    })
+
+def get_regular_users(request):
+    """Отдельная функция для получения обычных пользователей"""
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Authentication required"}, 
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    if request.user.role not in ['superadmin', 'admin'] and not request.user.is_superuser:
+        return Response(
+            {"error": "Only admins can view regular users list"}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    regular_users = AdminUser.objects.filter(role="user").order_by('-date_joined')
+    serializer = AdminUserListSerializer(regular_users, many=True)
+    
+    return Response({
+        "count": regular_users.count(),
+        "regular_users": serializer.data
+    })
+
+# --- VIEWSET ДЛЯ УПРАВЛЕНИЯ АДМИНАМИ ---
 class AdminUserViewSet(viewsets.ModelViewSet):
     queryset = AdminUser.objects.all().order_by('-date_joined')
     
@@ -146,7 +222,7 @@ class AdminUserViewSet(viewsets.ModelViewSet):
             "user": AdminUserDetailSerializer(user).data
         })
 
-# --- USER PROFILE (упрощенная версия) ---
+# --- VIEW ДЛЯ ПРОФИЛЕЙ ПОЛЬЗОВАТЕЛЕЙ ---
 class UserProfileViewSet(viewsets.ModelViewSet):
     serializer_class = UserProfileSerializer
     queryset = UserProfile.objects.all()
@@ -230,7 +306,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
             "profile": UserProfileSerializer(profile).data
         })
 
-# --- CURRENT USER PROFILE ---
+# --- ТЕКУЩИЙ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ---
 class CurrentUserProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserProfileSerializer
@@ -247,7 +323,7 @@ class CurrentUserProfileView(generics.RetrieveUpdateAPIView):
             )
             return profile
 
-# --- NOTIFICATIONS ---
+# --- УВЕДОМЛЕНИЯ ---
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     queryset = NotificationAdmin.objects.all()
@@ -275,20 +351,30 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-# --- SUPER ADMIN LIST ---
-class SuperAdminListView(APIView):
+# --- API VIEW ДЛЯ ОТДЕЛЬНЫХ ФУНКЦИЙ ---
+
+class SuperAdminListAPIView(APIView):
+    """API View для получения списка суперадминов"""
     permission_classes = [IsSuperAdmin]
-
+    
     def get(self, request):
-        superadmins = AdminUser.objects.filter(role="superadmin")
-        serializer = AdminUserListSerializer(superadmins, many=True)
+        return get_superadmins(request)
 
-        return Response({
-            "count": superadmins.count(),
-            "superadmins": serializer.data
-        })
+class AdminListAPIView(APIView):
+    """API View для получения списка админов"""
+    permission_classes = [IsAdminOrSuperAdmin]
+    
+    def get(self, request):
+        return get_admins(request)
 
-# --- TEST ADMIN ---
+class RegularUsersListAPIView(APIView):
+    """API View для получения списка обычных пользователей"""
+    permission_classes = [IsAdminOrSuperAdmin]
+    
+    def get(self, request):
+        return get_regular_users(request)
+
+# --- ТЕСТЫ АДМИНИСТРАТОРА ---
 class TestAdminViewSet(viewsets.ModelViewSet):
     serializer_class = TestAdminSerializer
     queryset = TestResult.objects.all().order_by("-dateCompleted")
@@ -318,15 +404,13 @@ class TestAdminViewSet(viewsets.ModelViewSet):
         data = TestAdminSerializer(queryset, many=True).data
         return Response({"testAdmin": data})
 
-    # POST /api/test-admin/
     def create(self, request, *args, **kwargs):
         serializer = TestAdminSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"created": serializer.data}, status=201)
 
-
-# --- CURRENT USER NOTIFICATIONS ---
+# --- ТЕКУЩИЕ УВЕДОМЛЕНИЯ ПОЛЬЗОВАТЕЛЯ ---
 class CurrentUserNotificationsView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
