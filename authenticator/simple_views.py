@@ -329,13 +329,14 @@ class CurrentUserProfileView(generics.RetrieveUpdateAPIView):
         try:
             return UserProfile.objects.get(user=self.request.user)
         except UserProfile.DoesNotExist:
-            profile = UserProfile.objects.create(
+            return UserProfile.objects.create(
                 user=self.request.user,
                 phone=self.request.user.phoneNumber,
-                status='active',
-                is_pdf=False
+                status='active'
             )
-            return profile
+
+
+
 
 # --- УВЕДОМЛЕНИЯ ---
 class NotificationViewSet(viewsets.ModelViewSet):

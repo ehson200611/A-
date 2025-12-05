@@ -21,8 +21,10 @@ class Question(models.Model):
         return f"{self.level}: {self.question[:60]}"
 
 
+from django.db import models
+
 class TestResult(models.Model):
-    profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    profile = models.ForeignKey("authenticator.UserProfile", on_delete=models.CASCADE)
     level = models.CharField(max_length=2, choices=LEVEL_CHOICES)
     totalQuestions = models.IntegerField()
     correctAnswers = models.IntegerField()
@@ -30,5 +32,11 @@ class TestResult(models.Model):
     score = models.IntegerField()
     dateCompleted = models.DateTimeField(auto_now_add=True)
 
+    # ✅ Нав: ҷавобҳои корбар
+    answers = models.JSONField(default=dict, blank=True)  # {question_id: selected_index}
+
     def __str__(self):
-        return f"{self.profile.user} - {self.level} - {self.score}"
+        return f"{self.profile.user.name} - {self.level} - {self.score}"
+
+
+

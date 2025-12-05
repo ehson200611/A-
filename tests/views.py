@@ -81,6 +81,7 @@ class TestResultViewSet(viewsets.ModelViewSet):
             correctAnswers=correct,
             incorrectAnswers=incorrect,
             score=score,
+            answers=answers,   # ✅ Илова шуд
         )
 
         return Response({

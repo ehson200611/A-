@@ -41,21 +41,34 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    # Тестҳои истифодабаранда
     tests = serializers.SerializerMethodField()
+
+    # Барои баргардонидани номи юзер
     user_name = serializers.CharField(source='user.name', read_only=True)
+
+    # role аз property меояд → source лозим нест!
+    role = serializers.CharField(read_only=True)
 
     class Meta:
         model = UserProfile
         fields = [
-            'id', 'user', 'user_name', 'phone', 'status', 
-            'is_pdf', 'pdf_updated_at', 'tests'
+            'id',
+            'user',
+            'user_name',
+            'phone',
+            'role',
+            'status',
+            'is_pdf',
+            'pdf_updated_at',
+            'tests',
         ]
-        read_only_fields = ['id', 'user', 'pdf_updated_at']
+        read_only_fields = ['id', 'user', 'pdf_updated_at', 'role']
 
-    @extend_schema_field(OpenApiTypes.OBJECT)  # Явно указываем тип
     def get_tests(self, obj):
-        results = TestResult.objects.filter(profile=obj)
-        return TestResultSerializer(results, many=True).data if results else []
+        tests = obj.get_tests()        # ← TestResult queryset
+        return TestResultSerializer(tests, many=True).data
+
 
 
 class UserProfilePDFSerializer(serializers.ModelSerializer):
