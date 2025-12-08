@@ -50,7 +50,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
 
 class TestResultViewSet(viewsets.ModelViewSet):
-    queryset = TestResult.objects.all()
+    queryset = TestResult.objects.all().order_by('-dateCompleted')
     serializer_class = TestResultSerializer
     permission_classes = [IsAuthenticated]
 

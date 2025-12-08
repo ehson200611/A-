@@ -2,10 +2,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .simple_views import (
+    ForgotPasswordView,
     RegisterView, 
     LoginView,
     AdminUserViewSet, 
     NotificationViewSet,
+    ResetPasswordView,
     UserProfileViewSet, 
     SuperAdminListAPIView,
     AdminListAPIView,
@@ -13,6 +15,7 @@ from .simple_views import (
     TestAdminViewSet, 
     CurrentUserProfileView,
     CurrentUserNotificationsView,
+    VerifyResetCodeView,
     get_superadmins,  # Импортируем отдельные функции
     get_admins,
     get_regular_users
@@ -37,7 +40,9 @@ urlpatterns = [
     path('superadmins/', SuperAdminListAPIView.as_view(), name='superadmin-list'),
     path('admins/', AdminListAPIView.as_view(), name='admin-list'),
     path('regular-users/', RegularUsersListAPIView.as_view(), name='regular-users-list'),
-    
+    path('auth/forgot-password/', ForgotPasswordView.as_view()),
+    path('auth/verify-reset-code/', VerifyResetCodeView.as_view()),
+    path('auth/reset-password/', ResetPasswordView.as_view()),
     # API endpoints
     path('', include(router.urls)),
 ]

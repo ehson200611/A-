@@ -1,3 +1,4 @@
+from datetime import timezone
 from rest_framework import serializers
 from .models import AdminUser, NotificationAdmin, UserProfile
 from tests.models import TestResult
@@ -37,7 +38,8 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = NotificationAdmin
         fields = "__all__"
-        read_only_fields = ["user", "status", "date"]
+        read_only_fields = ["user", "date"]
+
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -88,14 +90,14 @@ class UserProfilePDFSerializer(serializers.ModelSerializer):
 class AdminUserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdminUser
-        fields = ['id', 'name', 'phoneNumber', 'role', 'is_active', 'date_joined']
+        fields = ['id', 'name', 'phoneNumber', 'role', 'is_active', 'date_joined','is_pdf']
         read_only_fields = ['id', 'date_joined']
 
 
 class AdminUserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdminUser
-        fields = ['id', 'name', 'phoneNumber', 'role', 'is_active', 'is_staff', 'date_joined']
+        fields = ['id', 'name', 'phoneNumber', 'role', 'is_active', 'is_staff', 'date_joined','is_pdf']
         read_only_fields = ['id', 'date_joined']
 
 
@@ -129,6 +131,7 @@ class TestAdminSerializer(serializers.ModelSerializer):
             "incorrectAnswers",
             "score",
             "status",
+            "answers",        # ← ← ← ИН ҶО ИЛОВА ШУД
         ]
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -144,66 +147,66 @@ class TestAdminSerializer(serializers.ModelSerializer):
         return "N/A"
 
 
+
 class AdminRoleSerializer(serializers.ModelSerializer):
-    """Сериализатор для управления администраторами"""
-    password = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'})
-    passwordConfirm = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'})
-    
+    password = serializers.CharField(write_only=True, required=False)
+    passwordConfirm = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = AdminUser
         fields = [
-            'id', 'name', 'phoneNumber', 'role', 'is_active', 
-            'is_staff', 'date_joined', 'password', 'passwordConfirm'
+            'id', 'name', 'phoneNumber', 'role', 'is_active',
+            'is_staff', 'date_joined', 'password', 'passwordConfirm',
+            'is_pdf',     # ← ИН ҶО ИЛОВА ШУД
         ]
         read_only_fields = ['id', 'date_joined']
-        extra_kwargs = {
-            'role': {'choices': ['admin', 'superadmin']}
-        }
-    
-    def validate(self, data):
-        password = data.get('password')
-        password_confirm = data.get('passwordConfirm')
-        
-        if password or password_confirm:
-            if not password or not password_confirm:
-                raise serializers.ValidationError(
-                    "Both password and password confirmation are required"
-                )
-            if password != password_confirm:
-                raise serializers.ValidationError("Passwords do not match")
-        
-        if 'passwordConfirm' in data:
-            del data['passwordConfirm']
-        
-        return data
-    
-    def validate_role(self, value):
-        if value not in ['admin', 'superadmin']:
-            raise serializers.ValidationError(
-                "Role must be either 'admin' or 'superadmin'"
-            )
-        return value
-    
-    def create(self, validated_data):
-        password = validated_data.pop('password', None)
-        user = AdminUser(**validated_data)
-        
-        if password:
-            user.set_password(password)
-        else:
-            user.set_password('default123')
-        
-        user.save()
-        return user
-    
+
     def update(self, instance, validated_data):
+        # Парол
         password = validated_data.pop('password', None)
-        
+        validated_data.pop('passwordConfirm', None)
+
+        # is_pdf пеш аз сохтан
+        new_pdf_value = validated_data.get('is_pdf', instance.is_pdf)
+
+        # Навсозии ҳамаи филдҳо
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        
+
+        # Парол иваз шавад
         if password:
             instance.set_password(password)
-        
+
         instance.save()
+
+        # ⬇️  ҲАМИН ҶО — ҲАМЗАМОН USERPROFILE.is_pdf ИВАЗ МЕШАД ⬇️
+        try:
+            profile = UserProfile.objects.get(user=instance)
+            profile.is_pdf = new_pdf_value
+            profile.pdf_updated_at = timezone.now()
+            profile.save()
+        except UserProfile.DoesNotExist:
+            pass
+
         return instance
+
+
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    phoneNumber = serializers.CharField()
+
+class VerifyCodeSerializer(serializers.Serializer):
+    phoneNumber = serializers.CharField()
+    code = serializers.CharField()
+
+class ResetPasswordSerializer(serializers.Serializer):
+    phoneNumber = serializers.CharField()
+    code = serializers.CharField()
+    password = serializers.CharField()
+    passwordConfirm = serializers.CharField()
+
+    def validate(self, data):
+        if data['password'] != data['passwordConfirm']:
+            raise serializers.ValidationError("Passwords do not match")
+        return data

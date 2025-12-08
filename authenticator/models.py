@@ -32,6 +32,8 @@ class AdminUser(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
+    is_pdf = models.BooleanField(default=False)
+
 
     objects = AdminUserManager()
 
@@ -60,6 +62,7 @@ class NotificationAdmin(models.Model):
     ]
 
     user = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name="notifications")
+    name = models.CharField(max_length=255)  # ⬅️ ИЛОВА ШУД
     title = models.CharField(max_length=255)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='unread')
@@ -67,6 +70,7 @@ class NotificationAdmin(models.Model):
 
     def __str__(self):
         return f"{self.title} → {self.status}"
+
 
 
 class UserProfile(models.Model):
@@ -91,4 +95,15 @@ class UserProfile(models.Model):
 
 
 
-  
+class PasswordResetCode(models.Model):
+    phoneNumber = models.CharField(max_length=20)
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        from django.utils import timezone
+        return (timezone.now() - self.created_at).seconds > 300  # 5 minutes
+
+
+
+

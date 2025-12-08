@@ -7,16 +7,18 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import AdminUser, NotificationAdmin, UserProfile
+from .models import AdminUser, NotificationAdmin, PasswordResetCode, UserProfile
 from .serializers import (
-    RegisterSerializer, LoginSerializer, NotificationSerializer, 
+    ForgotPasswordSerializer, RegisterSerializer, LoginSerializer, NotificationSerializer, ResetPasswordSerializer, 
     UserProfileSerializer, UserProfilePDFSerializer, AdminUserListSerializer, AdminUserDetailSerializer,
-    AdminUserUpdateRoleSerializer, TestAdminSerializer, AdminRoleSerializer
+    AdminUserUpdateRoleSerializer, TestAdminSerializer, AdminRoleSerializer, VerifyCodeSerializer
 )
 from .permissions import IsSuperAdmin, IsAdminOrSuperAdmin, IsOwnerOrAdmin
 from rest_framework.views import APIView
 from tests.models import TestResult
 from .token import get_tokens_for_user  # Ҷойи функсияи тавлиди токен
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 
 
 User = get_user_model()
@@ -365,6 +367,20 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+    
+    @action(detail=True, methods=['post'], url_path="mark-read")
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        notification.status = "read"
+        notification.save()
+        return Response({"message": "Notification marked as read"})
+
+    @action(detail=True, methods=['post'], url_path="mark-unread")
+    def mark_unread(self, request, pk=None):
+        notification = self.get_object()
+        notification.status = "unread"
+        notification.save()
+        return Response({"message": "Notification marked as unread"})
 
 # --- API VIEW ДЛЯ ОТДЕЛЬНЫХ ФУНКЦИЙ ---
 
@@ -425,10 +441,109 @@ class TestAdminViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response({"created": serializer.data}, status=201)
 
-# --- ТЕКУЩИЕ УВЕДОМЛЕНИЯ ПОЛЬЗОВАТЕЛЯ ---
+# --- ТЕКУЩИЕ УВЕДОМЛЕНИЯ ПОЛЬЗОВАТЕЛЯ ---  
 class CurrentUserNotificationsView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return NotificationAdmin.objects.filter(user=self.request.user).order_by("-date")
+    
+
+
+
+from drf_spectacular.utils import extend_schema
+
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=ForgotPasswordSerializer,
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data['phoneNumber']
+
+        try:
+            user = AdminUser.objects.get(phoneNumber=phone)
+        except AdminUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        import random
+        code = str(random.randint(100000, 999999))
+
+        PasswordResetCode.objects.create(phoneNumber=phone, code=code)
+
+        print("RESET CODE:", code)
+
+        return Response({"message": "Reset code sent"})
+
+
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=ResetPasswordSerializer,
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data['phoneNumber']
+        code = serializer.validated_data['code']
+        password = serializer.validated_data['password']
+
+        try:
+            reset = PasswordResetCode.objects.filter(phoneNumber=phone).latest('created_at')
+        except PasswordResetCode.DoesNotExist:
+            return Response({"error": "Invalid reset request"}, status=404)
+
+        if reset.code != code:
+            return Response({"error": "Invalid code"}, status=400)
+
+        if reset.is_expired():
+            return Response({"error": "Code expired"}, status=400)
+
+        try:
+            user = AdminUser.objects.get(phoneNumber=phone)
+        except AdminUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        user.set_password(password)
+        user.save()
+
+        return Response({"message": "Password reset successfully"})
+
+
+class VerifyResetCodeView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=VerifyCodeSerializer,
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    def post(self, request):
+        serializer = VerifyCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data['phoneNumber']
+        code = serializer.validated_data['code']
+
+        try:
+            reset = PasswordResetCode.objects.filter(phoneNumber=phone).latest('created_at')
+        except PasswordResetCode.DoesNotExist:
+            return Response({"error": "Code not found"}, status=404)
+
+        if reset.code != code:
+            return Response({"error": "Invalid code"}, status=400)
+
+        if reset.is_expired():
+            return Response({"error": "Code expired"}, status=400)
+
+        return Response({"message": "Code verified"})
+
