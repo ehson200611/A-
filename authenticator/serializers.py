@@ -196,13 +196,11 @@ class AdminRoleSerializer(serializers.ModelSerializer):
 class ForgotPasswordSerializer(serializers.Serializer):
     phoneNumber = serializers.CharField()
 
-class VerifyCodeSerializer(serializers.Serializer):
-    phoneNumber = serializers.CharField()
-    code = serializers.CharField()
+
+
 
 class ResetPasswordSerializer(serializers.Serializer):
     phoneNumber = serializers.CharField()
-    code = serializers.CharField()
     password = serializers.CharField()
     passwordConfirm = serializers.CharField()
 

@@ -95,14 +95,6 @@ class UserProfile(models.Model):
 
 
 
-class PasswordResetCode(models.Model):
-    phoneNumber = models.CharField(max_length=20)
-    code = models.CharField(max_length=6)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def is_expired(self):
-        from django.utils import timezone
-        return (timezone.now() - self.created_at).seconds > 300  # 5 minutes
 
 
 

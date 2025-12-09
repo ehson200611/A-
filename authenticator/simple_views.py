@@ -7,11 +7,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import AdminUser, NotificationAdmin, PasswordResetCode, UserProfile
+from .models import AdminUser, NotificationAdmin, UserProfile
 from .serializers import (
     ForgotPasswordSerializer, RegisterSerializer, LoginSerializer, NotificationSerializer, ResetPasswordSerializer, 
     UserProfileSerializer, UserProfilePDFSerializer, AdminUserListSerializer, AdminUserDetailSerializer,
-    AdminUserUpdateRoleSerializer, TestAdminSerializer, AdminRoleSerializer, VerifyCodeSerializer
+    AdminUserUpdateRoleSerializer, TestAdminSerializer
 )
 from .permissions import IsSuperAdmin, IsAdminOrSuperAdmin, IsOwnerOrAdmin
 from rest_framework.views import APIView
@@ -312,15 +312,22 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='toggle-pdf')
     def toggle_pdf(self, request, pk=None):
         profile = self.get_object()
-        
+    
+        # 1. Профилро toggle мекунем
         profile.is_pdf = not profile.is_pdf
         profile.pdf_updated_at = timezone.now()
         profile.save()
-        
+    
+        # 2. 🟢 ҲАМОҲАНГ КАРДАНИ AdminUser.is_pdf
+        user = profile.user
+        user.is_pdf = profile.is_pdf
+        user.save()
+    
         return Response({
             "message": f"PDF status toggled to {profile.is_pdf}",
             "profile": UserProfileSerializer(profile).data
         })
+
 
 # --- ТЕКУЩИЙ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ---
 class CurrentUserProfileView(generics.RetrieveUpdateAPIView):
@@ -347,12 +354,14 @@ class NotificationViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [IsAuthenticated]  # Танҳо логиншудаҳо
         elif self.action == 'create':
-            permission_classes = [IsAdminOrSuperAdmin]
+            permission_classes = [AllowAny]  # Ҳар кас метавонад эҷод кунад
         else:
-            permission_classes = [IsAdminOrSuperAdmin]
+            permission_classes = [AllowAny]  # Ё экшнҳои дигар
         return [permission() for permission in permission_classes]
+
+
 
     def get_queryset(self):
         user = self.request.user
@@ -459,7 +468,8 @@ class ForgotPasswordView(APIView):
 
     @extend_schema(
         request=ForgotPasswordSerializer,
-        responses={200: OpenApiTypes.OBJECT}
+        responses={200: OpenApiTypes.OBJECT},
+        description="Verify phone number and allow user to reset password"
     )
     def post(self, request):
         serializer = ForgotPasswordSerializer(data=request.data)
@@ -467,19 +477,13 @@ class ForgotPasswordView(APIView):
 
         phone = serializer.validated_data['phoneNumber']
 
-        try:
-            user = AdminUser.objects.get(phoneNumber=phone)
-        except AdminUser.DoesNotExist:
+        # Check user exists
+        if not AdminUser.objects.filter(phoneNumber=phone).exists():
             return Response({"error": "User not found"}, status=404)
 
-        import random
-        code = str(random.randint(100000, 999999))
+        return Response({"message": "Phone verified. You may reset password now"})
 
-        PasswordResetCode.objects.create(phoneNumber=phone, code=code)
 
-        print("RESET CODE:", code)
-
-        return Response({"message": "Reset code sent"})
 
 
 
@@ -488,26 +492,15 @@ class ResetPasswordView(APIView):
 
     @extend_schema(
         request=ResetPasswordSerializer,
-        responses={200: OpenApiTypes.OBJECT}
+        responses={200: OpenApiTypes.OBJECT},
+        description="Reset password using phone number only"
     )
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         phone = serializer.validated_data['phoneNumber']
-        code = serializer.validated_data['code']
         password = serializer.validated_data['password']
-
-        try:
-            reset = PasswordResetCode.objects.filter(phoneNumber=phone).latest('created_at')
-        except PasswordResetCode.DoesNotExist:
-            return Response({"error": "Invalid reset request"}, status=404)
-
-        if reset.code != code:
-            return Response({"error": "Invalid code"}, status=400)
-
-        if reset.is_expired():
-            return Response({"error": "Code expired"}, status=400)
 
         try:
             user = AdminUser.objects.get(phoneNumber=phone)
@@ -520,30 +513,5 @@ class ResetPasswordView(APIView):
         return Response({"message": "Password reset successfully"})
 
 
-class VerifyResetCodeView(APIView):
-    permission_classes = [AllowAny]
 
-    @extend_schema(
-        request=VerifyCodeSerializer,
-        responses={200: OpenApiTypes.OBJECT}
-    )
-    def post(self, request):
-        serializer = VerifyCodeSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        phone = serializer.validated_data['phoneNumber']
-        code = serializer.validated_data['code']
-
-        try:
-            reset = PasswordResetCode.objects.filter(phoneNumber=phone).latest('created_at')
-        except PasswordResetCode.DoesNotExist:
-            return Response({"error": "Code not found"}, status=404)
-
-        if reset.code != code:
-            return Response({"error": "Invalid code"}, status=400)
-
-        if reset.is_expired():
-            return Response({"error": "Code expired"}, status=400)
-
-        return Response({"message": "Code verified"})
 
