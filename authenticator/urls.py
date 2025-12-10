@@ -1,4 +1,4 @@
-# authenticator/urls.py (обновленная версия)
+# authenticator/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .simple_views import (
@@ -8,6 +8,7 @@ from .simple_views import (
     AdminUserViewSet, 
     NotificationViewSet,
     ResetPasswordView,
+    SendCodeView,
     UserProfileViewSet, 
     SuperAdminListAPIView,
     AdminListAPIView,
@@ -15,9 +16,6 @@ from .simple_views import (
     TestAdminViewSet, 
     CurrentUserProfileView,
     CurrentUserNotificationsView,
-    get_superadmins,  # Импортируем отдельные функции
-    get_admins,
-    get_regular_users
 ) 
 
 router = DefaultRouter()
@@ -41,6 +39,8 @@ urlpatterns = [
     path('regular-users/', RegularUsersListAPIView.as_view(), name='regular-users-list'),
     path('auth/forgot-password/', ForgotPasswordView.as_view()),
     path('auth/reset-password/', ResetPasswordView.as_view()),
+    path('auth/send-code/', SendCodeView.as_view(), name='send-code'),
+    
     # API endpoints
     path('', include(router.urls)),
 ]

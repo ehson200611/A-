@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from .models import AdminUser, NotificationAdmin, UserProfile
 from .serializers import (
-    ForgotPasswordSerializer, RegisterSerializer, LoginSerializer, NotificationSerializer, ResetPasswordSerializer, 
+    AdminUserSetPasswordSerializer, ForgotPasswordSerializer, RegisterSerializer, LoginSerializer, NotificationSerializer, ResetPasswordSerializer, SendCodeSerializer, 
     UserProfileSerializer, UserProfilePDFSerializer, AdminUserListSerializer, AdminUserDetailSerializer,
     AdminUserUpdateRoleSerializer, TestAdminSerializer
 )
@@ -20,13 +20,52 @@ from .token import get_tokens_for_user  # Ҷойи функсияи тавлид
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 
+from authenticator import models
+
 
 User = get_user_model()
 
 # --- РЕГИСТРАЦИЯ ---
-class RegisterView(generics.CreateAPIView):
-    serializer_class = RegisterSerializer
+from drf_spectacular.utils import extend_schema
+from .serializers import RegisterSerializer
+
+
+class RegisterView(APIView):
     permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=RegisterSerializer,
+        responses={
+            201: OpenApiTypes.OBJECT,
+            400: OpenApiTypes.OBJECT,
+        },
+        description="Register new user using phone verification code"
+    )
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data['phone']
+        code = serializer.validated_data['code']
+        password = serializer.validated_data['password']
+
+        # 🚨 check SMS code
+        try:
+            sms = SMSCode.objects.filter(phone=phone).latest('created_at')
+        except SMSCode.DoesNotExist:
+            return Response({"error": "Code not found"}, status=400)
+
+        if sms.code != code:
+            return Response({"error": "Invalid code"}, status=400)
+
+        # create user
+        user = User.objects.create_user(
+            phoneNumber=phone,
+            password=password
+        )
+
+        return Response({"message": "User registered"}, status=201)
+
 
 # --- АВТОРИЗАЦИЯ ---
 from rest_framework import generics
@@ -154,6 +193,8 @@ def get_regular_users(request):
     })
 
 # --- VIEWSET ДЛЯ УПРАВЛЕНИЯ АДМИНАМИ ---
+# simple_views.py
+
 class AdminUserViewSet(viewsets.ModelViewSet):
     queryset = AdminUser.objects.all().order_by('-date_joined')
     
@@ -166,6 +207,8 @@ class AdminUserViewSet(viewsets.ModelViewSet):
             permission_classes = [IsOwnerOrAdmin | IsSuperAdmin]
         elif self.action in ['update_role', 'activate_user', 'deactivate_user']:
             permission_classes = [IsSuperAdmin]
+        elif self.action in ['toggle_pdf', 'set_password']:
+            permission_classes = [IsAdminOrSuperAdmin]
         else:
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
@@ -175,6 +218,8 @@ class AdminUserViewSet(viewsets.ModelViewSet):
             return AdminUserListSerializer
         elif self.action == 'update_role':
             return AdminUserUpdateRoleSerializer
+        elif self.action == 'set_password':
+            return AdminUserSetPasswordSerializer
         return AdminUserDetailSerializer
 
     def get_queryset(self):
@@ -190,8 +235,66 @@ class AdminUserViewSet(viewsets.ModelViewSet):
         else:
             return AdminUser.objects.filter(id=user.id)
 
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new admin user (only for superadmins)
+        """
+        serializer = AdminUserDetailSerializer(data=request.data)
+        if serializer.is_valid():
+            # Check if phone number already exists
+            if AdminUser.objects.filter(phoneNumber=serializer.validated_data['phoneNumber']).exists():
+                return Response(
+                    {"error": "User with this phone number already exists"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            user = AdminUser.objects.create_user(
+                phoneNumber=serializer.validated_data['phoneNumber'],
+                name=serializer.validated_data['name'],
+                password=request.data.get('password', 'defaultpassword123'),  # Default password
+                role=serializer.validated_data.get('role', 'user'),
+                is_active=serializer.validated_data.get('is_active', True)
+            )
+            
+            return Response(
+                AdminUserDetailSerializer(user).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        """
+        Update admin user (partial update allowed)
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Check permissions for role change
+        if 'role' in request.data and instance.role != request.data['role']:
+            if not (request.user.role == 'superadmin' or request.user.is_superuser):
+                return Response(
+                    {"error": "Only superadmins can change user roles"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        serializer = AdminUserDetailSerializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        
+        # Handle password update if provided
+        if 'password' in request.data:
+            instance.set_password(request.data['password'])
+        
+        self.perform_update(serializer)
+        
+        return Response(serializer.data)
+
     @action(detail=True, methods=['patch'], url_path='update-role')
     def update_role(self, request, pk=None):
+        """
+        Update user role (only for superadmins)
+        URL: PATCH /api/users/{id}/update-role/
+        Body: {"role": "admin"}
+        """
         user = self.get_object()
         
         if user.id == request.user.id:
@@ -211,6 +314,10 @@ class AdminUserViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='activate')
     def activate_user(self, request, pk=None):
+        """
+        Activate user account
+        URL: POST /api/users/{id}/activate/
+        """
         user = self.get_object()
         user.is_active = True
         user.save()
@@ -222,6 +329,10 @@ class AdminUserViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='deactivate')
     def deactivate_user(self, request, pk=None):
+        """
+        Deactivate user account
+        URL: POST /api/users/{id}/deactivate/
+        """
         user = self.get_object()
         
         if user.id == request.user.id:
@@ -238,7 +349,203 @@ class AdminUserViewSet(viewsets.ModelViewSet):
             "user": AdminUserDetailSerializer(user).data
         })
 
+    @action(detail=True, methods=['post'], url_path='toggle-pdf')
+    def toggle_pdf(self, request, pk=None):
+        """
+        Toggle PDF status for a specific user
+        URL: POST /api/users/{id}/toggle-pdf/
+        """
+        user = self.get_object()
+        
+        # Санҷидани иҷозат
+        if not (request.user.role in ['superadmin', 'admin'] or request.user.is_superuser):
+            return Response(
+                {"error": "Permission denied"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Пайдо кардани профили корбар
+        try:
+            profile = UserProfile.objects.get(user=user)
+        except UserProfile.DoesNotExist:
+            # Агар профил вуҷуд надошта бошад, эҷод мекунем
+            profile = UserProfile.objects.create(
+                user=user,
+                phone=user.phoneNumber,
+                status='active',
+                is_pdf=False
+            )
+        
+        # Toggle кардани статуси PDF
+        profile.is_pdf = not profile.is_pdf
+        profile.pdf_updated_at = timezone.now()
+        profile.save()
+        
+        # Ҳамонгсозии AdminUser.is_pdf
+        user.is_pdf = profile.is_pdf
+        user.save()
+        
+        return Response({
+            "message": f"PDF status toggled to {profile.is_pdf}",
+            "user": AdminUserDetailSerializer(user).data,
+            "is_pdf": profile.is_pdf,
+            "pdf_updated_at": profile.pdf_updated_at
+        })
+
+    @action(detail=True, methods=['post'], url_path='set-password')
+    def set_password(self, request, pk=None):
+        """
+        Set new password for user
+        URL: POST /api/users/{id}/set-password/
+        Body: {"password": "newpassword", "password_confirm": "newpassword"}
+        """
+        user = self.get_object()
+        
+        # Санҷидани иҷозат
+        if not (request.user.role in ['superadmin', 'admin'] or request.user.is_superuser):
+            return Response(
+                {"error": "Permission denied"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        password = request.data.get('password')
+        password_confirm = request.data.get('password_confirm')
+        
+        if not password or not password_confirm:
+            return Response(
+                {"error": "Both password and password_confirm are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if password != password_confirm:
+            return Response(
+                {"error": "Passwords do not match"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if len(password) < 6:
+            return Response(
+                {"error": "Password must be at least 6 characters long"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user.set_password(password)
+        user.save()
+        
+        return Response({
+            "message": "Password updated successfully",
+            "user": AdminUserDetailSerializer(user).data
+        })
+
+    @action(detail=False, methods=['get'], url_path='by-role')
+    def get_users_by_role(self, request):
+        """
+        Get users filtered by role
+        URL: GET /api/users/by-role/?role=admin
+        """
+        role = request.query_params.get('role')
+        
+        if not role:
+            return Response(
+                {"error": "Role parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if role not in ['user', 'admin', 'superadmin']:
+            return Response(
+                {"error": "Invalid role. Must be one of: user, admin, superadmin"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        queryset = self.get_queryset().filter(role=role)
+        serializer = AdminUserListSerializer(queryset, many=True)
+        
+        return Response({
+            "count": queryset.count(),
+            "users": serializer.data
+        })
+
+    @action(detail=False, methods=['get'], url_path='search')
+    def search_users(self, request):
+        """
+        Search users by name or phone number
+        URL: GET /api/users/search/?q=search_term
+        """
+        search_term = request.query_params.get('q', '').strip()
+        
+        if not search_term:
+            return Response(
+                {"error": "Search term (q parameter) is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        queryset = self.get_queryset().filter(
+            models.Q(name__icontains=search_term) |
+            models.Q(phoneNumber__icontains=search_term)
+        )
+        
+        serializer = AdminUserListSerializer(queryset, many=True)
+        
+        return Response({
+            "count": queryset.count(),
+            "search_term": search_term,
+            "users": serializer.data
+        })
+
+    @action(detail=False, methods=['get'], url_path='pdf-users')
+    def pdf_users(self, request):
+        """
+        Get all users with PDF enabled
+        URL: GET /api/users/pdf-users/
+        """
+        queryset = self.get_queryset().filter(is_pdf=True)
+        serializer = AdminUserListSerializer(queryset, many=True)
+        
+        return Response({
+            "count": queryset.count(),
+            "users": serializer.data
+        })
+
+    @action(detail=False, methods=['get'], url_path='non-pdf-users')
+    def non_pdf_users(self, request):
+        """
+        Get all users with PDF disabled
+        URL: GET /api/users/non-pdf-users/
+        """
+        queryset = self.get_queryset().filter(is_pdf=False)
+        serializer = AdminUserListSerializer(queryset, many=True)
+        
+        return Response({
+            "count": queryset.count(),
+            "users": serializer.data
+        })
+
+    @action(detail=True, methods=['get'], url_path='profile')
+    def get_user_profile(self, request, pk=None):
+        """
+        Get user profile details
+        URL: GET /api/users/{id}/profile/
+        """
+        user = self.get_object()
+        
+        try:
+            profile = UserProfile.objects.get(user=user)
+            serializer = UserProfileSerializer(profile)
+            return Response(serializer.data)
+        except UserProfile.DoesNotExist:
+            # Create profile if doesn't exist
+            profile = UserProfile.objects.create(
+                user=user,
+                phone=user.phoneNumber,
+                status='active',
+                is_pdf=user.is_pdf
+            )
+            serializer = UserProfileSerializer(profile)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 # --- VIEW ДЛЯ ПРОФИЛЕЙ ПОЛЬЗОВАТЕЛЕЙ ---
+# simple_views.py
+
 class UserProfileViewSet(viewsets.ModelViewSet):
     serializer_class = UserProfileSerializer
     queryset = UserProfile.objects.all()
@@ -310,22 +617,126 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'], url_path='toggle-pdf')
-    def toggle_pdf(self, request, pk=None):
-        profile = self.get_object()
-    
-        # 1. Профилро toggle мекунем
+    def toggle_pdf_by_profile(self, request, pk=None):
+        """
+        Toggle PDF status for a specific profile (using profile ID)
+        URL: POST /api/profiles/{profile_id}/toggle-pdf/
+        """
+        # pk ин ҷо profile_id аст
+        try:
+            profile = self.get_object()  # Ин профилро бо pk (profile_id) мегирад
+        except UserProfile.DoesNotExist:
+            return Response(
+                {"error": "Profile not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Санҷидани иҷозат
+        if not (request.user.role in ['superadmin', 'admin'] or request.user.is_superuser):
+            return Response(
+                {"error": "Permission denied"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Toggle кардани статуси PDF
         profile.is_pdf = not profile.is_pdf
         profile.pdf_updated_at = timezone.now()
         profile.save()
-    
-        # 2. 🟢 ҲАМОҲАНГ КАРДАНИ AdminUser.is_pdf
+        
+        # Ҳамонгсозии AdminUser.is_pdf
         user = profile.user
         user.is_pdf = profile.is_pdf
         user.save()
-    
+        
         return Response({
-            "message": f"PDF status toggled to {profile.is_pdf}",
-            "profile": UserProfileSerializer(profile).data
+            "message": f"PDF status toggled to {profile.is_pdf} for user {user.name}",
+            "profile_id": profile.id,
+            "user_id": user.id,
+            "user_name": user.name,
+            "is_pdf": profile.is_pdf,
+            "pdf_updated_at": profile.pdf_updated_at
+        })
+
+    @action(detail=False, methods=['post'], url_path='toggle-pdf-by-user')
+    def toggle_pdf_by_user_id(self, request):
+        """
+        Toggle PDF status by user ID from request body
+        URL: POST /api/profiles/toggle-pdf-by-user/
+        Body: {"user_id": 123}
+        """
+        user_id = request.data.get('user_id')
+        
+        if not user_id:
+            return Response(
+                {"error": "user_id is required in request body"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Пайдо кардани корбар бо ID-и додашуда
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        return self._toggle_pdf_for_user(user, request)
+
+    @action(detail=False, methods=['post'], url_path='toggle-pdf-by-user/(?P<user_id>[^/.]+)')
+    def toggle_pdf_by_user_url(self, request, user_id=None):
+        """
+        Toggle PDF status by user ID from URL parameter
+        URL: POST /api/profiles/toggle-pdf-by-user/{user_id}/
+        """
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        return self._toggle_pdf_for_user(user, request)
+
+    def _toggle_pdf_for_user(self, user, request):
+        """
+        Функсияи хусусӣ барои toggle кардани PDF барои корбари муайян
+        """
+        # Санҷидани иҷозат
+        if not (request.user.role in ['superadmin', 'admin'] or request.user.is_superuser):
+            return Response(
+                {"error": "Permission denied"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Пайдо кардани профили корбар
+        try:
+            profile = UserProfile.objects.get(user=user)
+        except UserProfile.DoesNotExist:
+            # Агар профил вуҷуд надошта бошад, эҷод мекунем
+            profile = UserProfile.objects.create(
+                user=user,
+                phone=user.phoneNumber,
+                status='active',
+                is_pdf=False
+            )
+        
+        # Toggle кардани статуси PDF
+        profile.is_pdf = not profile.is_pdf
+        profile.pdf_updated_at = timezone.now()
+        profile.save()
+        
+        # Ҳамонгсозии AdminUser.is_pdf
+        user.is_pdf = profile.is_pdf
+        user.save()
+        
+        return Response({
+            "message": f"PDF status toggled to {profile.is_pdf} for user {user.name}",
+            "user_id": user.id,
+            "user_name": user.name,
+            "is_pdf": profile.is_pdf,
+            "pdf_updated_at": profile.pdf_updated_at
         })
 
 
@@ -514,4 +925,33 @@ class ResetPasswordView(APIView):
 
 
 
+import random
+from .sms_service import format_sms_code, send_sms_code
+from .models import SMSCode
 
+class SendCodeView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=SendCodeSerializer,
+        responses={200: OpenApiTypes.OBJECT},
+        description="Send SMS verification code to user's phone number. Purpose can be 'register' or 'reset_password'."
+    )
+    def post(self, request):
+        serializer = SendCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.validated_data['phoneNumber']
+        purpose = serializer.validated_data.get('purpose', 'register')  # default if not provided
+        code = str(random.randint(100000, 999999))
+
+        # Формат ва фиристодани SMS
+        msg = format_sms_code(phone, code, purpose)
+        SMSCode.objects.create(phone=phone, code=code, purpose=purpose)
+        send_sms_code(phone, msg)
+
+        return Response({
+            "message": f"Verification code for {purpose} sent successfully",
+            "phone": phone,
+            "purpose": purpose
+        })

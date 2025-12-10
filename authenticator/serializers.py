@@ -1,32 +1,21 @@
 from datetime import timezone
 from rest_framework import serializers
-from .models import AdminUser, NotificationAdmin, UserProfile
+from .models import AdminUser, NotificationAdmin, SMSCode, UserProfile
 from tests.models import TestResult
 from tests.serializers import TestResultSerializer
 from drf_spectacular.utils import extend_schema_field
 from drf_spectacular.types import OpenApiTypes
 
 
-class RegisterSerializer(serializers.ModelSerializer):
-    passwordConfirm = serializers.CharField(write_only=True)
+from rest_framework import serializers
 
-    class Meta:
-        model = AdminUser
-        fields = ['name', 'phoneNumber', 'password', 'passwordConfirm']
-        extra_kwargs = {'password': {'write_only': True}}
 
-    def validate(self, data):
-        if data['password'] != data['passwordConfirm']:
-            raise serializers.ValidationError("Passwords do not match")
-        return data
+class RegisterSerializer(serializers.Serializer):
+    phone = serializers.CharField()
+    code = serializers.CharField()
+    password = serializers.CharField(write_only=True)
 
-    def create(self, validated_data):
-        validated_data.pop("passwordConfirm")
-        password = validated_data.pop("password")
-        user = AdminUser(**validated_data)
-        user.set_password(password)
-        user.save()
-        return user
+
 
 
 class LoginSerializer(serializers.Serializer):
@@ -88,9 +77,11 @@ class UserProfilePDFSerializer(serializers.ModelSerializer):
 
 
 class AdminUserListSerializer(serializers.ModelSerializer):
+    is_pdf = serializers.BooleanField(source='is_pdf_from_profile')
+    
     class Meta:
         model = AdminUser
-        fields = ['id', 'name', 'phoneNumber', 'role', 'is_active', 'date_joined','is_pdf']
+        fields = ['id', 'name', 'phoneNumber', 'role', 'is_active', 'date_joined', 'is_pdf']
         read_only_fields = ['id', 'date_joined']
 
 
@@ -198,13 +189,52 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 
 
-
 class ResetPasswordSerializer(serializers.Serializer):
     phoneNumber = serializers.CharField()
     password = serializers.CharField()
     passwordConfirm = serializers.CharField()
+    code = serializers.CharField()
 
     def validate(self, data):
+        phone = data['phoneNumber']
+        code = data['code']
+
+        try:
+            sms = SMSCode.objects.filter(phone=phone, purpose='reset_password').latest("created_at")
+        except SMSCode.DoesNotExist:
+            raise serializers.ValidationError("Code not found for reset password")
+
+        if sms.code != code:
+            raise serializers.ValidationError("Wrong code")
+
+        if sms.is_expired():
+            raise serializers.ValidationError("Code expired")
+
         if data['password'] != data['passwordConfirm']:
+            raise serializers.ValidationError("Passwords do not match")
+
+        return data
+
+
+
+# serializers.py
+from rest_framework import serializers
+
+class SendCodeSerializer(serializers.Serializer):
+    phoneNumber = serializers.CharField()
+    purpose = serializers.ChoiceField(
+        choices=[('register', 'Register'), ('reset_password', 'Reset Password')],
+        default='register',
+        required=False
+    )
+
+# serializers.py
+
+class AdminUserSetPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, required=True)
+    password_confirm = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, data):
+        if data['password'] != data['password_confirm']:
             raise serializers.ValidationError("Passwords do not match")
         return data

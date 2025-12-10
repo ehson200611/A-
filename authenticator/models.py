@@ -48,7 +48,31 @@ class AdminUser(AbstractBaseUser, PermissionsMixin):
 
     def is_admin(self):
         return self.role == 'admin' or self.is_superadmin()
-
+    
+    @property
+    def is_pdf_from_profile(self):
+        """Получает значение is_pdf из связанного UserProfile"""
+        try:
+            return self.userprofile.is_pdf
+        except UserProfile.DoesNotExist:
+            return False
+    
+    @is_pdf_from_profile.setter
+    def is_pdf_from_profile(self, value):
+        """Устанавливает значение is_pdf в связанный UserProfile"""
+        try:
+            profile = self.userprofile
+            profile.is_pdf = value
+            profile.pdf_updated_at = timezone.now()
+            profile.save()
+        except UserProfile.DoesNotExist:
+            # Создаем профиль, если его нет
+            UserProfile.objects.create(
+                user=self,
+                phone=self.phoneNumber,
+                is_pdf=value,
+                pdf_updated_at=timezone.now()
+            )
 
 class NotificationAdmin(models.Model):
     TYPE_CHOICES = [
@@ -95,6 +119,20 @@ class UserProfile(models.Model):
 
 
 
+class SMSCode(models.Model):
+    PURPOSE_CHOICES = [
+        ('register', 'Register'),
+        ('reset_password', 'Reset Password')
+    ]
+
+    phone = models.CharField(max_length=20)
+    code = models.CharField(max_length=6)
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default='register')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        from django.utils import timezone
+        return (timezone.now() - self.created_at).total_seconds() > 300  # 5 дақиқа
 
 
 
