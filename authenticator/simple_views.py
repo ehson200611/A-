@@ -790,7 +790,6 @@ class NotificationViewSet(viewsets.ModelViewSet):
         return NotificationAdmin.objects.filter(user=user).order_by("-date")
 
     def perform_create(self, serializer):
-        phone = self.request.user.phoneNumber
         code = self.request.data.get("code")
 
         # Агар code фиристода нашуда бошад
@@ -800,7 +799,6 @@ class NotificationViewSet(viewsets.ModelViewSet):
         # Ҷустуҷӯи охирин SMS бо мақсади notification
         try:
             sms = SMSCode.objects.filter(
-                phone=phone,
                 purpose="notification"
             ).latest("created_at")
         except SMSCode.DoesNotExist:
