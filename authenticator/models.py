@@ -118,11 +118,11 @@ class UserProfile(models.Model):
 
 
 
-
 class SMSCode(models.Model):
     PURPOSE_CHOICES = [
         ('register', 'Register'),
-        ('reset_password', 'Reset Password')
+        ('reset_password', 'Reset Password'),
+        ('notification', 'Notification'),  # ⬅️ ИЛОВА ШУД
     ]
 
     phone = models.CharField(max_length=20)

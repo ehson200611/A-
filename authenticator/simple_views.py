@@ -48,6 +48,8 @@ class RegisterView(APIView):
         phone = serializer.validated_data['phone']
         code = serializer.validated_data['code']
         password = serializer.validated_data['password']
+        name = serializer.validated_data['name']
+
 
         # 🚨 check SMS code
         try:
@@ -61,7 +63,8 @@ class RegisterView(APIView):
         # create user
         user = User.objects.create_user(
             phoneNumber=phone,
-            password=password
+            password=password,
+            name=name 
         )
 
         return Response({"message": "User registered"}, status=201)

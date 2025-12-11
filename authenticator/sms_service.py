@@ -21,6 +21,12 @@ def format_sms_code(phone: str, code: str, purpose: str) -> str:
             f"A-Plus LC: Ваш код для сброса пароля — {code}. "
             "Если вы не запрашивали сброс, проигнорируйте это сообщение."
         )
+    elif purpose == 'notification' :
+        msg = (
+            f"A-Plus LC: Уведомление — ваш код подтверждения: {code}. "
+            "Если вы не запрашивали это действие, просто игнорируйте сообщение."
+        )
+
     else:
         msg = f"A-Plus LC: Ваш код — {code}."
     return msg

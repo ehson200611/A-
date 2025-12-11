@@ -14,6 +14,8 @@ class RegisterSerializer(serializers.Serializer):
     phone = serializers.CharField()
     code = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    name = serializers.CharField()   # ⬅️ FULLNAME / NAME ИЛОВА ШУД
+
 
 
 
