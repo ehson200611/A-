@@ -33,6 +33,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 
+
 class UserProfileSerializer(serializers.ModelSerializer):
     # Тестҳои истифодабаранда
     tests = serializers.SerializerMethodField()
@@ -225,7 +226,7 @@ from rest_framework import serializers
 class SendCodeSerializer(serializers.Serializer):
     phoneNumber = serializers.CharField()
     purpose = serializers.ChoiceField(
-        choices=[('register', 'Register'), ('reset_password', 'Reset Password')],
+        choices=[('register', 'Register'), ('reset_password', 'Reset Password'),('notification', "Notofication")],
         default='register',
         required=False
     )

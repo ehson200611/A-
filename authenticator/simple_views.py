@@ -1,4 +1,5 @@
 # authenticator/simple_views.py (исправленная версия)
+from rest_framework.exceptions import ValidationError
 from rest_framework import generics, viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -789,6 +790,31 @@ class NotificationViewSet(viewsets.ModelViewSet):
         return NotificationAdmin.objects.filter(user=user).order_by("-date")
 
     def perform_create(self, serializer):
+        phone = self.request.user.phoneNumber
+        code = self.request.data.get("code")
+
+        # Агар code фиристода нашуда бошад
+        if not code:
+            raise ValidationError({"error": "Code is required"})
+
+        # Ҷустуҷӯи охирин SMS бо мақсади notification
+        try:
+            sms = SMSCode.objects.filter(
+                phone=phone,
+                purpose="notification"
+            ).latest("created_at")
+        except SMSCode.DoesNotExist:
+            raise ValidationError({"error": "Notification code not found"})
+
+        # Проверка кода
+        if sms.code != code:
+            raise ValidationError({"error": "Invalid notification code"})
+
+        # Проверка истечение срока
+        if sms.is_expired():
+            raise ValidationError({"error": "Notification code expired"})
+
+        # Агар код дуруст бошад — notification сохта мешавад
         serializer.save(user=self.request.user)
     
     @action(detail=True, methods=['post'], url_path="mark-read")
@@ -957,4 +983,55 @@ class SendCodeView(APIView):
             "message": f"Verification code for {purpose} sent successfully",
             "phone": phone,
             "purpose": purpose
+        })
+    
+
+class SendNotificationSMSView(APIView):
+    """
+    Аввал CODE-ро месанҷад → агар дуруст бошад → SMS notification мефиристад
+    """
+
+    def post(self, request):
+        phone = request.data.get("phoneNumber")
+        input_code = request.data.get("code")
+        purpose = request.data.get("purpose", "notification")
+
+        if not phone or not input_code:
+            return Response({"error": "phoneNumber and code are required"}, status=400)
+
+        # 1) Ҷустуҷӯи код
+        try:
+            sms = SMSCode.objects.filter(
+                phone=phone,
+                purpose='notification'
+            ).latest("created_at")
+        except SMSCode.DoesNotExist:
+            return Response({"error": "Code not found"}, status=404)
+
+        # 2) Санҷиши код
+        if sms.code != input_code:
+            return Response({"error": "Invalid code"}, status=400)
+
+        if sms.is_expired():
+            return Response({"error": "Code expired"}, status=400)
+
+        # 3) Иҷозат барои фиристодани SMS
+        # (ИН ҶО ШУМО РЕАЛ SMS API МЕГУЗОРЕД)
+
+        # --- МИСОЛИ ФИРСТОДАНИ SMS ---
+        # send_sms(phone, "Your notification is confirmed!")
+        # -----------------------------
+
+        # 4) Эҷоди Notification дар база
+        notification = NotificationAdmin.objects.create(
+            user=request.user,
+            name="Code verified",
+            title="Notification sent successfully",
+            code=input_code,
+            type="success"
+        )
+
+        return Response({
+            "message": "SMS sent successfully",
+            "notification": NotificationSerializer(notification).data
         })
