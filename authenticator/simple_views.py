@@ -769,19 +769,22 @@ class NotificationViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
-            permission_classes = [IsAuthenticated]  # Танҳо логиншудаҳо
+            # Танҳо логиншудаҳо GET карда метавонанд
+            permission_classes = [IsAuthenticated]
         elif self.action == 'create':
-            permission_classes = [AllowAny]  # Ҳар кас метавонад эҷод кунад
+            # Ҳар кас метавонад notification созад (login набошад ҳам мешавад)
+            permission_classes = [AllowAny]
         else:
-            permission_classes = [AllowAny]  # Ё экшнҳои дигар
+            # update/delete → низ баръакс (бе login)
+            permission_classes = [AllowAny]
+
         return [permission() for permission in permission_classes]
-
-
 
     def get_queryset(self):
         user = self.request.user
         
         if not user.is_authenticated:
+            # Агар login нест — notification-и дигаронро набинад
             return NotificationAdmin.objects.none()
         
         if user.role in ['superadmin', 'admin'] or user.is_superuser:
@@ -792,11 +795,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         code = self.request.data.get("code")
 
-        # Агар code фиристода нашуда бошад
         if not code:
             raise ValidationError({"error": "Code is required"})
 
-        # Ҷустуҷӯи охирин SMS бо мақсади notification
         try:
             sms = SMSCode.objects.filter(
                 purpose="notification"
@@ -804,30 +805,15 @@ class NotificationViewSet(viewsets.ModelViewSet):
         except SMSCode.DoesNotExist:
             raise ValidationError({"error": "Notification code not found"})
 
-        # Проверка кода
         if sms.code != code:
             raise ValidationError({"error": "Invalid notification code"})
 
-        # Проверка истечение срока
         if sms.is_expired():
             raise ValidationError({"error": "Notification code expired"})
 
-        # Агар код дуруст бошад — notification сохта мешавад
-        serializer.save(user=self.request.user)
-    
-    @action(detail=True, methods=['post'], url_path="mark-read")
-    def mark_read(self, request, pk=None):
-        notification = self.get_object()
-        notification.status = "read"
-        notification.save()
-        return Response({"message": "Notification marked as read"})
+        # Агар user логин набошад, user=None → notification сохта мешавад
+        serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
 
-    @action(detail=True, methods=['post'], url_path="mark-unread")
-    def mark_unread(self, request, pk=None):
-        notification = self.get_object()
-        notification.status = "unread"
-        notification.save()
-        return Response({"message": "Notification marked as unread"})
 
 # --- API VIEW ДЛЯ ОТДЕЛЬНЫХ ФУНКЦИЙ ---
 

@@ -85,16 +85,23 @@ class NotificationAdmin(models.Model):
         ('read', 'Read')
     ]
 
-    user = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name="notifications")
+    user = models.ForeignKey(
+        AdminUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications"
+    )
     name = models.CharField(max_length=255)
     title = models.CharField(max_length=255)
-    code = models.CharField(max_length=6, null=True, blank=True)   # ⬅️ ИЛОВА ШУД
+    code = models.CharField(max_length=6, null=True, blank=True)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='unread')
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.title} → {self.status}"
+
 
 
 
